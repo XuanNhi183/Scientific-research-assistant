@@ -19,3 +19,6 @@ env/
 
 # folder for documentation
 docs/
+
+data/*.ipynb
+img/
