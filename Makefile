@@ -16,3 +16,6 @@ deps:
 
 parse:
 	PYTHONPATH=. uv run python scripts/parsing.py
+
+run:
+	PYTHONPATH=. uv run python app/main.py 
