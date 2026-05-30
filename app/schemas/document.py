@@ -5,3 +5,7 @@ class UploadResponse(BaseModel):
     filename: str
     file_path: str
     
+
+class DocumentContentResponse(BaseModel):
+    file_id: str
+    content: str

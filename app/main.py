@@ -1,5 +1,5 @@
 from fastapi import FastAPI, UploadFile, HTTPException
-from app.schemas.upload import UploadResponse
+from app.schemas.document import UploadResponse, DocumentContentResponse
 import uvicorn
 from app.service.document_service import doc_service
 
@@ -17,9 +17,14 @@ async def upload_file(file: UploadFile):
        return UploadResponse(**result)
 
 
-@app.get("/document/{file_id}/content")
-async def get_document(file_id: str):
-    pass
+@app.get("/document/{file_id}/content", response_model=DocumentContentResponse)
+async def get_document_content(file_id: str):
+    content = doc_service.extract_text(file_id)
+    return DocumentContentResponse(file_id=file_id, content=content)
+
+
+
+
 
 # http://127.0.0.1:8000/docs
 if __name__ == "__main__":

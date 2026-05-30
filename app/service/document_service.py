@@ -2,6 +2,7 @@ from fastapi import UploadFile, HTTPException
 import os
 from uuid import uuid4
 import json
+import fitz
 
 class DocumentService:
     async def upload_file(self, file: UploadFile):
@@ -55,5 +56,19 @@ class DocumentService:
         
         raise HTTPException(status_code=404, detail="Document not found")
 
+    
+    def extract_text(self, file_id: str):
+        doc = self.get_document(file_id)
+        file_path = doc["file_path"]
+        
+        pdf = fitz.open(file_path)
+        text = ""
+        
+        for page in pdf:
+            text += page.get_text()
+            
+        pdf.close()
+        return text
+    
 
 doc_service = DocumentService()
