@@ -22,3 +22,5 @@ docs/
 
 data/*.ipynb
 img/
+data/uploads/*.pdf
+data/*.jsonl

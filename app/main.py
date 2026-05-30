@@ -1,8 +1,7 @@
 from fastapi import FastAPI, UploadFile, HTTPException
-import os
 from app.schemas.upload import UploadResponse
-from uuid import uuid4
 import uvicorn
+from app.service.document_service import doc_service
 
 app = FastAPI()
 
@@ -14,19 +13,13 @@ async def upload_file(file: UploadFile):
                 detail="Only PDF files are allowed."
             )
     else:
-        upload_location = "./data/uploads/"
-        file_location = f"{upload_location}{file.filename}"
-        
-        os.makedirs(upload_location, exist_ok=True)
-        
-        with open(file_location, "wb") as f:
-            f.write(await file.read())
-        
-        return UploadResponse(
-            filename=file.filename,
-            file_id=str(uuid4()),  
-            file_path=file_location
-        )
+       result = await doc_service.upload_file(file)
+       return UploadResponse(**result)
+
+
+@app.get("/document/{file_id}/content")
+async def get_document(file_id: str):
+    pass
 
 # http://127.0.0.1:8000/docs
 if __name__ == "__main__":
