@@ -28,16 +28,20 @@ class RAGService:
         sources = []
         for chunk in chunks:
             meta = chunk.get("metadata", {})
+            chunk_label = meta.get("chunk_index")
+            if chunk_label is None:
+                chunk_label = meta.get("chunk_id")
             sources.append({
                 "file": meta.get("title"),
-                "page": meta.get("page_start")
+                "page": meta.get("page_start"),
+                "chunk": chunk_label
             })
 
             print(
                 f"""
     File: {meta.get('title')}
     Page: {meta.get('page_start')}
-    Chunk: {meta.get('chunk_index')}
+    Chunk: {chunk_label}
     Distance: {chunk.get('score')}
     """
             )
