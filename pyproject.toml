@@ -4,10 +4,8 @@ version = "0.1.0"
 description = "Research - AI scientific paper assistant with RAG and LangGraph"
 requires-python = ">=3.11"
 dependencies = [
-    "fastapi>=0.115.0",
     "python-multipart>=0.0.29",
     "pydantic>=2.8.0",
-    "uvicorn[standard]>=0.34.0",
     "pymupdf>=1.24.0",
     "datasets>=2.20.0",
     "huggingface-hub>=0.23.0",
@@ -15,5 +13,13 @@ dependencies = [
     "doclayout-yolo>=0.0.2",
     "ultralytics>=8.3.0",
     "python-multipart>=0.0.29",
+    "openai>=1.0.0",
+    # Feature Engineering
+    "chromadb>=1.0.0",
+    "qdrant-client>=1.8.0",
+    # Inference
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "chromadb>=1.5.9",
 ]
 

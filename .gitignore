@@ -20,7 +20,5 @@ env/
 # folder for documentation
 docs/
 
-data/*.ipynb
 img/
-data/uploads/*.pdf
-data/*.jsonl
+data/
