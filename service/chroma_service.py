@@ -39,13 +39,15 @@ class ChromaService:
 
         chunks = []
 
-        for doc, meta in zip(
+        for doc, meta, distance in zip(
             results["documents"][0],
-            results["metadatas"][0]
+            results["metadatas"][0],
+            results["distances"][0]
         ):
             chunks.append({
                 "text": doc,
-                "metadata": meta
+                "metadata": meta,
+                "score": distance
             })
 
         return chunks

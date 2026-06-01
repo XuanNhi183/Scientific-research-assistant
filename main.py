@@ -45,8 +45,7 @@ async def upload_file(file: UploadFile):
 
 @app.post("/ask_question/", response_model=AnswerResponse)
 def ask_question(request: QuestionRequest):
-    answer = rag_service.ask(request.question, top_k=5)
-    return AnswerResponse(answer=answer)
+    return rag_service.ask(request.question, top_k=5)
 
 
 

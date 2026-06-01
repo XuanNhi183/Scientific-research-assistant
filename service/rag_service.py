@@ -25,6 +25,12 @@ class RAGService:
         chunks = chroma_service.search(query_embedding, top_k)
         context = self.build_context(chunks)
         answer = llm_service.generate_answer(question, context)
-        return answer
+        sources = []
+        for chunk in chunks:
+            sources.append({
+                "file": chunk["metadata"]["title"],
+                "page": chunk["metadata"]["page_start"]
+            })
+        return {"answer": answer, "sources": sources}
 
 rag_service = RAGService()
