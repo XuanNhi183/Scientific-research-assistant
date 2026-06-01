@@ -1,5 +1,5 @@
 import chromadb
-from app.schemas.chunk import Chunk
+from schemas.chunk import Chunk
 
 class ChromaService:
     def __init__(self, collection_name: str):
@@ -15,6 +15,8 @@ class ChromaService:
             {
                 "paper_id": chunk.metadata.paper_id,
                 "title": chunk.metadata.title,
+                "chunk_id": chunk.chunk_id,
+                "chunk_index": chunk.chunk_index,
                 "page_start": chunk.metadata.page_start,
                 "page_end": chunk.metadata.page_end,
             }
@@ -29,11 +31,23 @@ class ChromaService:
         )
         
     
-    def search(self, query_embedding: list[float], top_k: int = 5):
+    def search(self, query_embedding, top_k=5):
         results = self.collection.query(
             query_embeddings=[query_embedding],
             n_results=top_k
         )
-        return results
+
+        chunks = []
+
+        for doc, meta in zip(
+            results["documents"][0],
+            results["metadatas"][0]
+        ):
+            chunks.append({
+                "text": doc,
+                "metadata": meta
+            })
+
+        return chunks
     
 chroma_service = ChromaService(collection_name="document_chunks")

@@ -1,6 +1,6 @@
 from openai import OpenAI
 import os
-from app.schemas.chunk import Chunk
+from schemas.chunk import Chunk
 
 class EmbeddingService:
     def __init__(self):

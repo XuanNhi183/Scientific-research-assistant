@@ -4,7 +4,7 @@ from uuid import uuid4
 import json
 import fitz
 
-from app.schemas.chunk import Chunk, ChunkMetadata
+from schemas.chunk import Chunk, ChunkMetadata
  
 
 class DocumentService:
