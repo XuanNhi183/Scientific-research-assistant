@@ -27,10 +27,20 @@ class RAGService:
         answer = llm_service.generate_answer(question, context)
         sources = []
         for chunk in chunks:
+            meta = chunk.get("metadata", {})
             sources.append({
-                "file": chunk["metadata"]["title"],
-                "page": chunk["metadata"]["page_start"]
+                "file": meta.get("title"),
+                "page": meta.get("page_start")
             })
+
+            print(
+                f"""
+    File: {meta.get('title')}
+    Page: {meta.get('page_start')}
+    Chunk: {meta.get('chunk_index')}
+    Distance: {chunk.get('score')}
+    """
+            )
         return {"answer": answer, "sources": sources}
 
 rag_service = RAGService()
