@@ -7,10 +7,11 @@ from dotenv import load_dotenv
 import uvicorn
 load_dotenv()
 
-from service.document_service import doc_service
+from service.document_service import DocumentService
 from service.chroma_service import chroma_service
-from service.rag_service import rag_service
-from service.embedding_service import embedding_service
+from service.rag_service import RAGService
+from service.embedding_service import EmbeddingService
+from service.chunking import get_chunks as build_chunks
 
 
 app = FastAPI()
@@ -23,18 +24,27 @@ async def upload_file(file: UploadFile):
                 detail="Only PDF files are allowed."
             )
     try:
-       result = await doc_service.upload_file(file)
-       chunks = doc_service.process_document(
-                result["file_id"],
-                chunk_size=400,
-                overlap=50
+        result = await DocumentService.upload_file(file)
+        chunks = build_chunks(
+            result["file_id"],
+            chunk_size=700,
+            overlap=150
         )
-       chunks = embedding_service.embed_chunks(chunks)
-       chroma_service.add_chunks(chunks)
-       print(
-           f"Total chunks in ChromaDB: {chroma_service.collection.count()}"
-       )
-       return UploadResponse(**result)
+        for chunk in chunks[:10]:
+            print(
+                chunk.metadata.page_start,
+                chunk.metadata.page_end,
+                chunk.metadata.char_start,
+                chunk.metadata.char_end,
+            )
+        await DocumentService.save_chunks(result["file_id"], chunks)
+        embedding_service = EmbeddingService()
+        chunks = embedding_service.embed_chunks(chunks)
+        await chroma_service.add_chunks(chunks)
+        print(
+            f"Total chunks in ChromaDB: {chroma_service.collection.count()}"
+        )
+        return UploadResponse(**result)
    
     except HTTPException:
         raise 
@@ -45,21 +55,24 @@ async def upload_file(file: UploadFile):
 
 @app.post("/ask_question/", response_model=AnswerResponse)
 def ask_question(request: QuestionRequest):
+    rag_service = RAGService()
     return rag_service.ask(request.question, top_k=5)
-
 
 
 @app.get("/document/{file_id}/chunks",response_model=list[Chunk])
 async def get_document_chunks(file_id: str):
-    return doc_service.load_chunks(file_id)
+    return DocumentService.load_chunks(file_id)
+
 
 @app.get("/document/{file_id}/content", response_model=DocumentContentResponse)
 async def get_document_content(file_id: str):
-    content = doc_service.extract_text(file_id)
+    content = DocumentService.extract_text(file_id)
     return DocumentContentResponse(file_id=file_id, content=content)
+
 
 @app.post("/search/")
 async def search_documents(request: SearchRequest, top_k: int = 5):
+    embedding_service = EmbeddingService()
     query_embedding = embedding_service.embed_query(request.question)
     results = chroma_service.search(query_embedding, top_k)
     return results

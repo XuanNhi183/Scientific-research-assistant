@@ -18,8 +18,8 @@ deps:
 	$(VENV_DIR)/bin/python -m pip install -U pip
 	$(VENV_DIR)/bin/python -m pip install -e .
 
-parse:
-	PYTHONPATH=. uv run python scripts/parsing.py
+test:
+	PYTHONPATH=. uv run python scripts/debug_chunking.py
 
 run:
 	PYTHONPATH=. uv run python main.py 

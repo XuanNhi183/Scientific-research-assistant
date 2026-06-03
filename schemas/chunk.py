@@ -4,13 +4,13 @@ class ChunkMetadata(BaseModel):
     paper_id: str
     title: str
 
-    # section: str | None = None
+    section: str | None = None
 
     page_start: int | None = None
     page_end: int | None = None
 
-    # char_start: int | None = None
-    # char_end: int | None = None
+    char_start: int | None = None
+    char_end: int | None = None
 
     source_pdf: str | None = None
     

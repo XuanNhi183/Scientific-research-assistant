@@ -29,4 +29,3 @@ class EmbeddingService:
         return chunks
         
     
-embedding_service = EmbeddingService()

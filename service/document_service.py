@@ -61,20 +61,6 @@ class DocumentService:
         
         raise HTTPException(status_code=404, detail="Document not found")
 
-    
-    def extract_text(self, file_id: str):
-        doc = self.get_document(file_id)
-        file_path = doc["file_path"]
-        
-        pdf = fitz.open(file_path)
-        text = ""
-        
-        for page in pdf:
-            text += page.get_text()
-            
-        pdf.close()
-        return text
-
     def extract_pages(self, file_id: str):
         doc = self.get_document(file_id)
         file_path = doc["file_path"]
@@ -93,20 +79,42 @@ class DocumentService:
         return pages
     
     
-    def chunking(self, text: str, chunk_size:int, overlap:int):
-        if overlap >= chunk_size:
-                raise ValueError("Overlap must be smaller than chunk size.")
-        words = text.split()
-        chunks = []
-        start = 0
-        while start < len(words):
-            end = start + chunk_size
-            chunk = (" ".join(words[start:end]))
-            if chunk:
-                chunks.append(chunk)
-            start += chunk_size - overlap
+    def extract_text(self, file_id: str):
+        doc = self.get_document(file_id)
+        file_path = doc["file_path"]
+        
+        pdf = fitz.open(file_path)
+        text = ""
+        
+        for page in pdf:
+            text += page.get_text()
             
-        return chunks
+        pdf.close()
+        return text
+    
+    
+    def extract_document(self, file_id: str):
+        page = self.extract_pages(file_id)
+        full_text = ""
+        page_map = []
+        current_position = 0
+        for page in page:
+            page_text = page["text"]
+            start = current_position
+            full_text += page_text
+            current_position += len(page_text)
+            
+            page_map.append({
+                "page": page["page_number"],
+                "char_start": start,
+                "char_end": current_position,
+            })
+            
+        return {
+            "full_text": full_text,
+            "page_map": page_map
+        }
+        
 
     def save_chunks(self, file_id: str, chunks: list[Chunk]):
         chunks_location = f"./data/chunks/{file_id}.jsonl"
@@ -176,6 +184,3 @@ class DocumentService:
         return chunks
 
     
-    
-    
-doc_service = DocumentService()
