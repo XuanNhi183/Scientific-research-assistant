@@ -9,7 +9,7 @@ load_dotenv()
 
 from service.document_service import doc_service
 from service.chroma_service import chroma_service
-from service.rag_service import RAGService
+from service.rag_service import rag_service
 from service.embedding_service import embedding_service
 from service.chunking import get_chunks as build_chunks
 
@@ -54,7 +54,7 @@ async def upload_file(file: UploadFile):
 
 @app.post("/ask_question/", response_model=AnswerResponse)
 def ask_question(request: QuestionRequest):
-    rag_service = RAGService()
+    rag_service = rag_service()
     return rag_service.ask(request.question, top_k=5)
 
 

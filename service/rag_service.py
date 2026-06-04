@@ -46,4 +46,6 @@ class RAGService:
     """
             )
         return {"answer": answer, "sources": sources}
-    
+
+
+rag_service = RAGService()
