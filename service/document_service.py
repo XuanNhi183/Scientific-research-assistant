@@ -183,4 +183,4 @@ class DocumentService:
 
         return chunks
 
-    
+doc_service = DocumentService()

@@ -1,4 +1,4 @@
-from service.document_service import DocumentService
+from service.document_service import doc_service
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from schemas.chunk import Chunk, ChunkMetadata
 from uuid import uuid4
@@ -97,7 +97,7 @@ def extract_sections(pdf_path: str):
     return sections
 
 def extract_document(file_id: str):
-    pages = DocumentService.extract_pages(file_id)
+    pages = doc_service.extract_pages(file_id)
     full_text = ""
     page_map = []
     current_position = 0
@@ -120,7 +120,7 @@ def extract_document(file_id: str):
     }
 
 
-async def chunk_sections(sections, chunk_size, overlap,):
+def chunk_sections(sections, chunk_size, overlap,):
     results = []
 
     splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
@@ -167,7 +167,7 @@ def find_page_for_chunk(char_start: int, char_end: int, page_map: list[dict]):
 
 
 def get_chunks(file_id: str, chunk_size: int, overlap: int):
-    doc_info =  DocumentService.get_document(file_id)
+    doc_info = doc_service.get_document(file_id)
     results = []
     chunk_index = 0
 

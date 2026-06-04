@@ -1,6 +1,6 @@
 from service.chroma_service import chroma_service
 from service.llm_service import llm_service
-from service.embedding_service import EmbeddingService
+from service.embedding_service import embedding_service
 
 class RAGService:
     def build_context(self, chunks):
@@ -21,7 +21,6 @@ class RAGService:
         return "\n\n".join(contexts)
     
     def ask(self, question: str, top_k: int = 5):
-        embedding_service = EmbeddingService()
         query_embedding = embedding_service.embed_query(question)
         chunks = chroma_service.search(query_embedding, top_k)
         context = self.build_context(chunks)
@@ -47,3 +46,4 @@ class RAGService:
     """
             )
         return {"answer": answer, "sources": sources}
+    

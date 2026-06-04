@@ -19,7 +19,7 @@ deps:
 	$(VENV_DIR)/bin/python -m pip install -e .
 
 test:
-	PYTHONPATH=. uv run python scripts/debug_chunking.py
+	PYTHONPATH=. uv run python scripts/debug_search.py
 
 run:
 	PYTHONPATH=. uv run python main.py 

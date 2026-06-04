@@ -15,6 +15,7 @@ class ChromaService:
             {
                 "paper_id": chunk.metadata.paper_id,
                 "title": chunk.metadata.title,
+                "section": chunk.metadata.section,
                 "chunk_id": chunk.chunk_id,
                 "chunk_index": chunk.chunk_index,
                 "page_start": chunk.metadata.page_start,

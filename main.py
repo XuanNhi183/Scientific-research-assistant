@@ -7,10 +7,10 @@ from dotenv import load_dotenv
 import uvicorn
 load_dotenv()
 
-from service.document_service import DocumentService
+from service.document_service import doc_service
 from service.chroma_service import chroma_service
 from service.rag_service import RAGService
-from service.embedding_service import EmbeddingService
+from service.embedding_service import embedding_service
 from service.chunking import get_chunks as build_chunks
 
 
@@ -24,7 +24,7 @@ async def upload_file(file: UploadFile):
                 detail="Only PDF files are allowed."
             )
     try:
-        result = await DocumentService.upload_file(file)
+        result = await doc_service.upload_file(file)
         chunks = build_chunks(
             result["file_id"],
             chunk_size=700,
@@ -37,10 +37,9 @@ async def upload_file(file: UploadFile):
                 chunk.metadata.char_start,
                 chunk.metadata.char_end,
             )
-        await DocumentService.save_chunks(result["file_id"], chunks)
-        embedding_service = EmbeddingService()
+        doc_service.save_chunks(result["file_id"], chunks)
         chunks = embedding_service.embed_chunks(chunks)
-        await chroma_service.add_chunks(chunks)
+        chroma_service.add_chunks(chunks)
         print(
             f"Total chunks in ChromaDB: {chroma_service.collection.count()}"
         )
@@ -61,18 +60,17 @@ def ask_question(request: QuestionRequest):
 
 @app.get("/document/{file_id}/chunks",response_model=list[Chunk])
 async def get_document_chunks(file_id: str):
-    return DocumentService.load_chunks(file_id)
+    return doc_service.load_chunks(file_id)
 
 
 @app.get("/document/{file_id}/content", response_model=DocumentContentResponse)
 async def get_document_content(file_id: str):
-    content = DocumentService.extract_text(file_id)
+    content = doc_service.extract_text(file_id)
     return DocumentContentResponse(file_id=file_id, content=content)
 
 
 @app.post("/search/")
 async def search_documents(request: SearchRequest, top_k: int = 5):
-    embedding_service = EmbeddingService()
     query_embedding = embedding_service.embed_query(request.question)
     results = chroma_service.search(query_embedding, top_k)
     return results

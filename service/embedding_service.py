@@ -1,6 +1,9 @@
 from openai import OpenAI
 import os
 from schemas.chunk import Chunk
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class EmbeddingService:
     def __init__(self):
@@ -28,4 +31,4 @@ class EmbeddingService:
 
         return chunks
         
-    
+embedding_service = EmbeddingService()
