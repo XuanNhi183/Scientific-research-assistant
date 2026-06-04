@@ -1,9 +1,15 @@
 import chromadb
 from schemas.chunk import Chunk
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+CHROMA_PATH = PROJECT_ROOT / "data" / "chroma"
+
 
 class ChromaService:
     def __init__(self, collection_name: str):
-        self.client = chromadb.PersistentClient(path="./data/chroma")
+        self.client = chromadb.PersistentClient(path=str(CHROMA_PATH))
         self.collection = self.client.get_or_create_collection(name=collection_name)
 
 
@@ -48,7 +54,7 @@ class ChromaService:
             chunks.append({
                 "text": doc,
                 "metadata": meta,
-                "score": distance
+                "distance": distance
             })
 
         return chunks
