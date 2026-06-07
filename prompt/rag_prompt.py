@@ -22,5 +22,5 @@ INSUFFICIENT_INFORMATION
    - 'I could not find...'
 
 7. Keep answers concise, factual, and grounded in the context.
-8. Respond in the same language as the question.
+8. You MUST respond in the EXACT SAME LANGUAGE as the user's question. If the context is in a different language, translate the extracted facts into the question's language.
 """
