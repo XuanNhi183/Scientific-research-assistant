@@ -20,8 +20,6 @@ env/
 # folder for documentation
 docs/
 
-img/
-
 data/chroma
 data/chunks
 data/evaluation
