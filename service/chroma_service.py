@@ -38,10 +38,15 @@ class ChromaService:
         )
         
     
-    def search(self, query_embedding, top_k=5):
+    def search(self, query_embedding, top_k=5, paper_id: str | None = None):
+        where_clause = None
+        if paper_id:
+            where_clause = {"paper_id": paper_id}
+            
         results = self.collection.query(
             query_embeddings=[query_embedding],
-            n_results=top_k
+            n_results=top_k,
+            where=where_clause
         )
 
         chunks = []

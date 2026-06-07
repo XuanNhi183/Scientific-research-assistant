@@ -20,9 +20,9 @@ class RAGService:
 
         return "\n\n".join(contexts)
     
-    def ask(self, question: str, top_k: int = 5):
+    def ask(self, question: str, paper_id: str | None = None, top_k: int = 5):
         query_embedding = embedding_service.embed_query(question)
-        chunks = chroma_service.search(query_embedding, top_k)
+        chunks = chroma_service.search(query_embedding, top_k, paper_id=paper_id)
         context = self.build_context(chunks)
         answer = llm_service.generate_answer(question, context)
         sources = []
@@ -42,7 +42,7 @@ class RAGService:
     File: {meta.get('title')}
     Page: {meta.get('page_start')}
     Chunk: {chunk_label}
-    Distance: {chunk.get('score')}
+    Distance: {chunk.get('distance')}
     """
             )
         return {"answer": answer, "sources": sources}

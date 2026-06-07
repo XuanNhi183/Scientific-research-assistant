@@ -172,9 +172,6 @@ def get_chunks(file_id: str, chunk_size: int, overlap: int):
     results = []
     chunk_index = 0
 
-    document = extract_document(file_id)
-    page_map = document["page_map"]
-
     sections = extract_sections(doc_info["file_path"])
     documents = chunk_sections(sections, chunk_size, overlap)
 
@@ -186,10 +183,9 @@ def get_chunks(file_id: str, chunk_size: int, overlap: int):
         if char_start < 0:
             continue
         char_end = char_start + len(text) - 1
-        page_start, page_end = find_page_for_chunk(char_start, char_end, page_map)
         
-        if page_end is None:
-            page_end = page_start
+        page_start = section.page_start
+        page_end = section.page_end
 
         metadata = ChunkMetadata(
             paper_id=file_id,

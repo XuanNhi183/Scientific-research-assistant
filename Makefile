@@ -12,7 +12,7 @@ activate:
 
 shell:
 	@test -f $(VENV_DIR)/bin/activate || (echo "Missing $(VENV_DIR)/bin/activate. Run: make venv"; exit 1)
-	@CONDA_AUTO_ACTIVATE_BASE=false bash -i -c "source $(VENV_DIR)/bin/activate; exec bash -i"
+	@bash -c 'TMPFILE=$$(mktemp); cat ~/.bashrc > $$TMPFILE; echo "conda deactivate 2>/dev/null || true; source $(VENV_DIR)/bin/activate; rm -f $$TMPFILE" >> $$TMPFILE; export CONDA_AUTO_ACTIVATE_BASE=false; exec bash --rcfile $$TMPFILE -i'
 
 deps:
 	$(VENV_DIR)/bin/python -m pip install -U pip
@@ -23,3 +23,6 @@ test:
 
 run:
 	PYTHONPATH=. uv run python main.py 
+
+server:
+	cd frontend && npm run dev

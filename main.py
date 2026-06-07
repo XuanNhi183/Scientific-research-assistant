@@ -1,6 +1,8 @@
 from fastapi import FastAPI, UploadFile, HTTPException
+from fastapi.responses import FileResponse
+import os
 from schemas.document import UploadResponse, DocumentContentResponse
-from schemas.rag import QuestionRequest, AnswerResponse
+from schemas.rag import QuestionRequest, AnswerResponse, AnalyzeRequest
 from schemas.chunk import Chunk
 from schemas.search import SearchRequest
 from dotenv import load_dotenv
@@ -12,6 +14,8 @@ from service.chroma_service import chroma_service
 from service.rag_service import rag_service
 from service.embedding_service import embedding_service
 from service.chunking import get_chunks as build_chunks
+from service.llm_service import llm_service
+import json
 
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -64,12 +68,20 @@ async def upload_file(file: UploadFile):
 
 @app.post("/ask_question/", response_model=AnswerResponse)
 def ask_question(request: QuestionRequest):
-    return rag_service.ask(request.question, top_k=5)
+    return rag_service.ask(request.question, request.paper_id, top_k=5)
 
 
 @app.get("/document/{file_id}/chunks",response_model=list[Chunk])
 async def get_document_chunks(file_id: str):
     return doc_service.load_chunks(file_id)
+
+
+@app.get("/document/{file_id}/pdf")
+async def get_document_pdf(file_id: str):
+    file_path = f"./data/uploads/{file_id}.pdf"
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="PDF not found")
+    return FileResponse(file_path, media_type="application/pdf")
 
 
 @app.get("/document/{file_id}/content", response_model=DocumentContentResponse)
@@ -83,6 +95,15 @@ async def search_documents(request: SearchRequest, top_k: int = 5):
     query_embedding = embedding_service.embed_query(request.question)
     results = chroma_service.search(query_embedding, top_k)
     return results
+
+@app.post("/analyze_paper/")
+async def analyze_paper(request: AnalyzeRequest):
+    try:
+        json_str = llm_service.generate_paper_analysis(request.rawText, request.title)
+        # Parse into dict to return as JSON response
+        return json.loads(json_str)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 

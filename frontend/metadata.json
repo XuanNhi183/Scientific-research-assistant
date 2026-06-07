@@ -1,0 +1,6 @@
+{
+  "name": "Research Paper AI Reader",
+  "description": "An interactive chatbot and reader for analyzing, understanding, and querying scientific research papers with AI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
