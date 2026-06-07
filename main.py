@@ -14,7 +14,17 @@ from service.embedding_service import embedding_service
 from service.chunking import get_chunks as build_chunks
 
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # Cho phép tất cả các nguồn frontend kết nối
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.post("/upload_processed_File/", response_model=UploadResponse)
 async def upload_file(file: UploadFile):
@@ -54,7 +64,6 @@ async def upload_file(file: UploadFile):
 
 @app.post("/ask_question/", response_model=AnswerResponse)
 def ask_question(request: QuestionRequest):
-    rag_service = rag_service()
     return rag_service.ask(request.question, top_k=5)
 
 
