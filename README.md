@@ -10,11 +10,11 @@ An intelligent, end-to-end scientific research assistant designed to parse, anal
 
 ## Overview
 
-A production-grade web application featuring:
-- **Interactive Glassmorphism UI**: A highly polished, modern React frontend with split-pane PDF reading and contextual chatting.
-- **Smart Passage Linking**: Users can highlight specific paragraphs in the PDF to ground the AI's answers directly on the text.
-- **Automated Document Processing**: Parses PDFs, splits them into semantic chunks, and generates vector embeddings.
-- **Retrieval-Augmented Generation (RAG)**: Uses advanced vector search to fetch relevant evidence from the paper before generating scientific answers.
+A robust, production-grade API backend featuring:
+- **FastAPI Core**: High-performance asynchronous API endpoints for document ingestion and contextual Q&A.
+- **Advanced Document Processing**: Parses PDFs, analyzes document layouts (YOLO), splits text into semantic chunks, and generates vector embeddings.
+- **Retrieval-Augmented Generation (RAG)**: Uses advanced vector search to fetch relevant evidence from papers before generating scientific answers.
+- **Contextual Grounding**: API supports receiving specific text snippets to force the AI to answer *only* based on that precise context.
 
 ## Project Structure
 
@@ -37,43 +37,31 @@ A production-grade web application featuring:
 
 ## Quick Start
 
-### 1. Start the Backend (FastAPI)
+### Start the Server
 
 ```bash
-# Create virtual environment (optional but recommended)
-python -m venv .venv
+# Install dependencies and create a virtual environment using uv
+uv sync
+
+# Activate the virtual environment
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-# Install dependencies
-pip install -r requirements.txt
-
 # Start the server (runs on http://localhost:8000)
-make server  # Or: uvicorn main:app --reload
-```
-
-### 2. Start the Frontend (React + Vite)
-
-```bash
-cd frontend
-
-# Install Node dependencies
-npm install
-
-# Start the development server (runs on http://localhost:3000)
-npm run dev
+make server  # Or: uv run uvicorn main:app --reload
 ```
 
 ## Tech Stack
 
-- **Framework**: Python 3.10+, FastAPI, LangChain
-- **Vector DB**: ChromaDB (Local persistent vector storage)
-- **Document Processing**: PyMuPDF (fitz), RecursiveCharacterTextSplitter
+- **Framework**: Python 3.11+, FastAPI, LangChain
+- **Vector DB**: ChromaDB / Qdrant Client (Persistent vector storage)
+- **Document Processing**: PyMuPDF (fitz), DocLayout-YOLO (for layout analysis), RecursiveCharacterTextSplitter
 - **Embeddings**: OpenAI Embeddings
-- **LLMs**: OpenAI GPT-4o / GPT-4o-mini 
+- **LLMs**: OpenAI GPT-4o / GPT-4o-mini
+- **Package Manager**: `uv` (Blazing fast Python dependency manager)
 
 ## Key Features
 
-- **Split-Screen Workstation**: Side-by-side view of the original research paper and the AI chat assistant.
-- **Contextual Grounding**: Click "Highlight" on any PDF text to force the AI to answer *only* based on that specific snippet.
-- **History Tracking**: Saves previous questions as quick-access tags to easily jump back into a train of thought.
-- **Academic UI Theme**: Designed with a soft, non-glaring pastel triad color scheme optimized for long research sessions.
+- **Robust RAG Pipeline**: End-to-end extraction, embedding, retrieval, and generation.
+- **RESTful API**: Standardized JSON request/response models powered by Pydantic.
+- **Modular Architecture**: Clean separation between routes, services, schemas, and data layers.
+- **AI-Powered Analysis**: Deep integration with OpenAI for high-quality scientific insights.
