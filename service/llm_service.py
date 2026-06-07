@@ -24,6 +24,16 @@ class LLMService:
             ]
         )
         return response.choices[0].message.content.strip()
+
+    def generate_raw(self, prompt: str, model: str = "gpt-4.1-mini") -> str:
+        """Raw completion without system prompt. Used for dataset question generation."""
+        response = self.client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=512,
+            temperature=0.9,
+        )
+        return response.choices[0].message.content.strip()
     
     
-llm_service = LLMService()
+llm_service = LLMService()
