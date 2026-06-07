@@ -26,7 +26,6 @@ data/chroma
 data/chunks
 data/evaluation
 data/uploads
-data/*.jsonl
 
 scripts/
 evaluation/
