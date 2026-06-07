@@ -11,6 +11,7 @@ Answer generation reuses RAG_SYSTEM_PROMPT from prompt/rag_prompt.py.
 import json
 import os
 from openai import OpenAI
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 
 SINGLE_HOP_PROMPT = """\
@@ -67,6 +68,7 @@ class QAGenerator:
         self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.model = model
 
+    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=2, max=10))
     def _call_llm(self, prompt: str, max_tokens: int = 512, temperature: float = 0.9) -> str:
         response = self.client.chat.completions.create(
             model=self.model,
@@ -117,6 +119,7 @@ class QAGenerator:
         raw = self._call_llm(prompt)
         return self._parse_json_list(raw)
 
+    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=2, max=10))
     def generate_answer(self, question: str, formatted_context: str, system_prompt: str) -> str:
         response = self.client.chat.completions.create(
             model=self.model,
