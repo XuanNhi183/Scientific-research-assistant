@@ -13,7 +13,7 @@ Distribution (matches target 40% EASY / 35% MEDIUM / 25% HARD):
 import random
 from typing import Optional
 
-from dataset.qa_generator import QAGenerator
+from dataset_builder.qa_generator import QAGenerator
 
 
 # ── Answer quality guards ──────────────────────────────────────────────────────

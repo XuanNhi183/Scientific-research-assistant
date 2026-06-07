@@ -20,9 +20,9 @@ from collections import Counter
 
 import pandas as pd
 
-from dataset.arxiv_downloader import ArxivDownloader
-from dataset.qa_generator import QAGenerator
-from dataset.retrieval_simulator import RetrievalSimulator
+from dataset_builder.arxiv_downloader import ArxivDownloader
+from dataset_builder.qa_generator import QAGenerator
+from dataset_builder.retrieval_simulator import RetrievalSimulator
 
 # ── Reuse production chunking modules ─────────────────────────────────────────
 from service.chunking import extract_sections, chunk_sections
