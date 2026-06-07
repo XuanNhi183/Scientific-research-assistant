@@ -1,6 +1,6 @@
 # Research Operating System - ResearchOS
 
-An intelligent, end-to-end scientific research assistant designed to parse, analyze, and extract deep insights from academic papers. ResearchOS acts as an interactive workspace where researchers can upload PDFs, select specific text passages, and perform highly contextual Q&A using Large Language Models (LLMs).
+An intelligent, end-to-end scientific research assistant designed to parse, analyze, and extract deep insights from academic papers. ResearchOS acts as an interactive workspace where researchers can upload PDFs, and perform highly contextual Q&A using Large Language Models (LLMs).
 
 ## Introduction
 
