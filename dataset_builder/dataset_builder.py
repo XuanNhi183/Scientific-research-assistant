@@ -141,15 +141,22 @@ class DatasetBuilder:
                     break
 
                 paper_id = str(row["id"])
+                normalized_id = ArxivDownloader.normalize_id(paper_id)
 
                 # Skip old-format IDs (e.g. "cs/0704.0047") — pre-2007 papers
-                if "/" in paper_id:
+                if "/" in normalized_id:
                     skipped_old += 1
                     continue
 
-                # Skip papers before min_year using update_date field
-                update_date = str(row.get("update_date", ""))
-                if update_date and int(update_date[:4]) < min_year:
+                # Extract year directly from normalized_id (e.g. "1804.1234" -> 2018, "0706.0022" -> 2007)
+                try:
+                    paper_year = 2000 + int(normalized_id[:2])
+                except (ValueError, IndexError):
+                    # Fallback to update_date if format is unexpected
+                    update_date = str(row.get("update_date", ""))
+                    paper_year = int(update_date[:4]) if update_date else 2000
+
+                if paper_year < min_year:
                     skipped_old += 1
                     continue
 
