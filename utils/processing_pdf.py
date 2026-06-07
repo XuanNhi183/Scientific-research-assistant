@@ -53,26 +53,26 @@ def get_body_font_size(lines):
 def is_heading(text: str, font_size: float, body_size: float,):
     text = text.strip()
 
-    if len(text) < 3:
+    # Headings are usually short. If it's too long, it's likely a paragraph or citation.
+    if len(text) < 3 or len(text) > 150:
         return False
 
-    if ":" in text:
+    # If it ends with a period, it's likely a sentence (except for single words or short phrases)
+    if text.endswith(".") and len(text.split()) > 4:
         return False
 
-    if font_size < body_size + 0.5:
-        return False
-
-    alpha_chars = [
-        c
-        for c in text if c.isalpha()
-    ]
-
+    # Check for at least some alphabet characters
+    alpha_chars = [c for c in text if c.isalpha()]
     if not alpha_chars:
         return False
 
-    upper_ratio = (
-        sum(c.isupper() for c in alpha_chars)
-        / len(alpha_chars)
-    )
+    # Arxiv headings typically have font_size strictly larger than body_size
+    if font_size >= body_size + 0.5:
+        return True
 
-    return upper_ratio > 0.8
+    # If font size is identical/very close, check if it matches a numbered heading pattern: "1 Introduction", "1.1 Background", "II. Method"
+    import re
+    if re.match(r"^([0-9]+\.?[0-9]*|[IVXLCDM]+\.?)\s+[A-Z]", text):
+        return True
+
+    return False

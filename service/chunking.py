@@ -45,16 +45,17 @@ def extract_sections(pdf_path: str):
     if not headings:
         return []
 
-    # bỏ mọi thứ trước ABSTRACT
+    # Bỏ mọi thứ trước ABSTRACT hoặc INTRODUCTION
     abstract_idx = None
 
     for i, h in enumerate(headings):
-        if "ABSTRACT" in h["title"].upper():
+        if "ABSTRACT" in h["title"].upper() or "INTRODUCTION" in h["title"].upper():
             abstract_idx = i
             break
 
+    # Nếu không tìm thấy, bắt đầu từ heading đầu tiên thay vì bỏ qua toàn bộ document
     if abstract_idx is None:
-        return []
+        abstract_idx = 0
 
     headings = headings[abstract_idx:]
 
