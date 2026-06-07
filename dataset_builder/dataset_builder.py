@@ -110,19 +110,25 @@ class DatasetBuilder:
         json_path: str,
         n_papers: int = 10,
         categories: list[str] | None = None,
+        min_year: int = 2018,
     ):
         """
         Load paper metadata from the Kaggle arxiv JSONL file,
         download each PDF, and generate samples.
+
+        Args:
+            min_year: Skip papers older than this year (default 2018).
+                      Old papers often have scanned/non-parseable PDFs.
         """
         categories = categories or ["cs.CL", "cs.AI", "cs.LG", "cs.IR"]
         pattern = "|".join(categories)
 
         processed = 0
         errors = 0
+        skipped_old = 0
         start = time.time()
 
-        print(f"Starting dataset build | target: {n_papers} papers")
+        print(f"Starting dataset build | target: {n_papers} papers | min_year: {min_year}")
         print(f"Output: {self.output_path}\n")
 
         for df_chunk in pd.read_json(json_path, lines=True, chunksize=5_000):
@@ -135,8 +141,19 @@ class DatasetBuilder:
                     break
 
                 paper_id = str(row["id"])
-                title = row["title"]
 
+                # Skip old-format IDs (e.g. "cs/0704.0047") — pre-2007 papers
+                if "/" in paper_id:
+                    skipped_old += 1
+                    continue
+
+                # Skip papers before min_year using update_date field
+                update_date = str(row.get("update_date", ""))
+                if update_date and int(update_date[:4]) < min_year:
+                    skipped_old += 1
+                    continue
+
+                title = row["title"]
                 print(f"[{processed+1}/{n_papers}] {paper_id} | {title[:70]}")
 
                 try:
@@ -157,7 +174,8 @@ class DatasetBuilder:
 
         elapsed = time.time() - start
         print(f"\n{'='*50}")
-        print(f"Done | {processed} papers | {errors} errors | {elapsed/60:.1f} min")
+        print(f"Done | {processed} papers | {errors} errors | {skipped_old} skipped (old) | {elapsed/60:.1f} min")
+
         self.print_stats()
 
     def process_paper(self, paper_id: str, title: str, pdf_path: str):
