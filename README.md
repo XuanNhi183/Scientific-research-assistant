@@ -86,7 +86,7 @@ make dataset-config CONFIG=config/my_config.yaml
 - **Vector DB**: ChromaDB (Local persistent vector store)
 - **Document Processing**: PyMuPDF (fitz) for text & page extraction, RecursiveCharacterTextSplitter for semantic chunking
 - **Embeddings**: OpenAI Embeddings (`text-embedding-3-small`)
-- **LLMs**: OpenAI `gpt-4.1-mini` (Q&A), `gpt-4o-mini` (paper analysis)
+- **LLMs**: OpenAI `gpt-4o-mini` for (Q&A), (paper analysis), and (dataset generation)
 - **Package Manager**: `uv`
 
 ## Key Features

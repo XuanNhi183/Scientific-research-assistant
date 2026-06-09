@@ -6,7 +6,7 @@ class LLMService:
     def __init__(self):
         self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         
-    def generate_answer(self, question: str, context: str, model: str = "gpt-4.1-mini") -> str:
+    def generate_answer(self, question: str, context: str, model: str = "gpt-4o-mini") -> str:
         user_prompt = f"""
         [Question]
         {question}
@@ -25,7 +25,7 @@ class LLMService:
         )
         return response.choices[0].message.content.strip()
 
-    def generate_raw(self, prompt: str, model: str = "gpt-4.1-mini") -> str:
+    def generate_raw(self, prompt: str, model: str = "gpt-4o-mini") -> str:
         """Raw completion without system prompt. Used for dataset question generation."""
         response = self.client.chat.completions.create(
             model=model,
