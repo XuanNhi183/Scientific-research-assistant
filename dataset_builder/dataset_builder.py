@@ -175,6 +175,9 @@ class DatasetBuilder:
         print(f"Starting dataset build | target: {n_papers} papers | min_year: {min_year}")
         print(f"Output: {self.output_path}\n")
 
+        # Clear existing file to prevent appending old generated samples
+        open(self.output_path, "w", encoding="utf-8").close()
+
         for df_chunk in pd.read_json(json_path, lines=True, chunksize=5_000):
             filtered = df_chunk[
                 df_chunk["categories"].str.contains(pattern, regex=True, na=False)
