@@ -110,6 +110,7 @@ class QAGenerator:
                 result.get("a2_completeness") == "FAIL",
                 result.get("a3_non_extractiveness") == "FAIL",
                 result.get("a4_coherence") == "FAIL",
+                result.get("a5_language") == "FAIL",
             ]
             if any(fail_criteria):
                 result["valid"] = False
@@ -211,6 +212,11 @@ class QAGenerator:
  
         if not validate:
             return answer
+            
+        MIN_WORDS = 12
+        if answer != "INSUFFICIENT_INFORMATION" and len(answer.split()) < MIN_WORDS:
+            print(f"  [A-Validator] Rejected short answer ({len(answer.split())} words) for: {question!r}")
+            return None
  
         val = self.validate_answer(question, answer, formatted_context)
         if val.get("valid", False):

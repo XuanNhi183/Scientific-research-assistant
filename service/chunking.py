@@ -55,10 +55,17 @@ def is_data_chunk(text: str) -> bool:
     all_tokens = text.lower().split()
     unique_ratio = len(set(all_tokens)) / len(all_tokens) if all_tokens else 0
 
+    # Signal 4: text density
+    letters = sum(1 for c in text if c.isalpha())
+    letter_ratio = letters / max(1, len(text))
+
+    if letter_ratio < 0.60:
+        return True
+
     flags = [
-        numeric_ratio >= 0.40,  # >= 40% of lines are numeric-dominant
-        avg_line_len <= 40,     # very short lines -> likely table rows
-        unique_ratio <= 0.35,   # low vocabulary diversity -> repetitive table entries
+        numeric_ratio >= 0.35,  # relaxed from 0.40
+        avg_line_len <= 50,     # relaxed from 40
+        unique_ratio <= 0.40,   # relaxed from 0.35
     ]
 
     # Require 2 of 3 signals — avoids false positives on result discussion sections

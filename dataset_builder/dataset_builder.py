@@ -17,6 +17,7 @@ from prompt.rag_prompt import RAG_SYSTEM_PROMPT
 
 import tiktoken
 from uuid import uuid4
+from service.chunking import is_data_chunk
 
 encoding = tiktoken.encoding_for_model("text-embedding-3-small")
 
@@ -48,6 +49,17 @@ def _is_valid_section(section) -> bool:
     # Remove sections whose text is too short to contain meaningful content
     if len(section.text.strip()) < 200:
         return False
+        
+    # Content-based filter: skip section if >25% lines are citations
+    lines = [l.strip() for l in section.text.splitlines() if l.strip()]
+    if len(lines) > 5:
+        bracket_refs = sum(1 for l in lines if re.match(r'^\s*\[\d+\]', l))
+        author_year_lines = sum(1 for l in lines if re.search(r'\(\d{4}\)', l))
+        venue_lines = sum(1 for l in lines if re.search(r'\b(In Proceedings|Journal of|arXiv preprint|vol\.|pp\.)\b', l, re.IGNORECASE))
+        
+        if (bracket_refs + author_year_lines + venue_lines) / len(lines) > 0.25:
+            return False
+
     return True
 
 
@@ -65,27 +77,32 @@ def _sections_to_chunks(sections, chunk_size: int, overlap: int) -> list[Chunk]:
         # Filter 1: chunk too short to contain meaningful content
         if len(text.strip()) < 300:
             continue
+            
+        # Filter 1.5: data chunk (second defensive layer)
+        if is_data_chunk(text):
+            continue
 
         # Filter 2: chunk looks like a reference list
         lines = [l.strip() for l in text.splitlines() if l.strip()]
         if len(lines) > 2:
             # Type A: Bracket references (e.g. "[1] Li Dong...")
-            bracket_refs = sum(1 for l in lines if re.match(r'^\[\d+\]', l))
+            bracket_refs = sum(1 for l in lines if re.match(r'^\s*\[\d+\]', l))
             if bracket_refs >= 1:
                 continue
                 
             # Type B: Author/Title/Venue references (APA, Harvard, etc.)
-            # e.g., "Li, D. (2016). Deep learning... In Proceedings of..."
             author_year_lines = sum(1 for l in lines if re.search(r'\(\d{4}\)', l))
             venue_lines = sum(1 for l in lines if re.search(r'\b(In Proceedings|Journal of|arXiv preprint|vol\.|pp\.)\b', l, re.IGNORECASE))
             
             # Lower threshold: if >20% of lines look like citations, drop it
             if (author_year_lines + venue_lines) / len(lines) > 0.2:
                 continue
+                
+        section_title = section.title if section.title else "Unknown"
         metadata = ChunkMetadata(
             paper_id="",   # filled in by caller
             title="",
-            section=section.title,
+            section=section_title,
             page_start=section.page_start,
             page_end=section.page_end,
             char_start=doc.metadata.get("start_index"),
@@ -249,6 +266,7 @@ class DatasetBuilder:
 
         # 4. Generate samples_per_paper samples
         generated = 0
+        valid_samples_buffer = []
         for _ in range(self.samples_per_paper * 3):  # extra attempts for failures
             if generated >= self.samples_per_paper:
                 break
@@ -260,14 +278,23 @@ class DatasetBuilder:
                     paper_id, title, chunks, self.distractor_pool
                 )
             if sample:
-                self._write(sample)
-                self._stats[sample["difficulty"]] += 1
-                self._stats[f"type:{sample['question_type']}"] += 1
+                valid_samples_buffer.append(sample)
                 generated += 1
+
+        MIN_VALID_RATIO = 0.25
+        valid_ratio = generated / self.samples_per_paper if self.samples_per_paper > 0 else 0
+        if valid_ratio < MIN_VALID_RATIO:
+            print(f"  [skip] {paper_id}: weak paper, only {generated}/{self.samples_per_paper} valid samples ({valid_ratio*100:.1f}%) < 25% — dropping.")
+            return
+
+        for sample in valid_samples_buffer:
+            self._write(sample)
+            self._stats[sample["difficulty"]] += 1
+            self._stats[f"type:{sample['question_type']}"] += 1
 
         # 5. Add this paper's chunks to the global distractor pool
         self.distractor_pool.extend(chunks)
-        print(f"  generated={generated} | pool_size={len(self.distractor_pool)}")
+        print(f"  generated={generated}/{self.samples_per_paper} | pool_size={len(self.distractor_pool)}")
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 
