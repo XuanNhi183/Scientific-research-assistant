@@ -10,6 +10,61 @@ encoding = tiktoken.encoding_for_model(
     "text-embedding-3-small"
 )
 
+
+def is_data_chunk(text: str) -> bool:
+    """
+    Detect chunks that are primarily data tables, frequency lists, or raw statistics
+    with no narrative content — these produce no valid QA pairs and should be skipped.
+
+    Uses three independent signals. A chunk is flagged if 2 or more signals fire
+    (lenient consensus to avoid dropping legitimate result-discussion chunks).
+
+    Signals
+    -------
+    1. numeric_line_ratio  : fraction of lines where >= 50% of tokens are numeric/punctuation.
+    2. avg_line_length     : mean character count per non-empty line.
+    3. unique_token_ratio  : unique_tokens / total_tokens.
+    4. min_char_length     : absolute minimum guard (checked first, before signal scoring).
+    """
+    lines = [l for l in text.splitlines() if l.strip()]
+    if not lines:
+        return True
+
+    # Absolute minimum length guard
+    if len(text.strip()) < 150:
+        return True
+
+    # Signal 1: numeric line ratio
+    numeric_line_count = 0
+    for line in lines:
+        tokens = line.split()
+        if not tokens:
+            continue
+        numeric_tokens = sum(
+            1 for t in tokens
+            if t.replace(",", "").replace(".", "").replace("%", "").replace("-", "").isdigit()
+        )
+        if numeric_tokens / len(tokens) >= 0.5:
+            numeric_line_count += 1
+    numeric_ratio = numeric_line_count / len(lines)
+
+    # Signal 2: average line length
+    avg_line_len = sum(len(l) for l in lines) / len(lines)
+
+    # Signal 3: unique token ratio
+    all_tokens = text.lower().split()
+    unique_ratio = len(set(all_tokens)) / len(all_tokens) if all_tokens else 0
+
+    flags = [
+        numeric_ratio >= 0.40,  # >= 40% of lines are numeric-dominant
+        avg_line_len <= 40,     # very short lines -> likely table rows
+        unique_ratio <= 0.35,   # low vocabulary diversity -> repetitive table entries
+    ]
+
+    # Require 2 of 3 signals — avoids false positives on result discussion sections
+    return sum(flags) >= 2
+
+
 @dataclass
 class SectionInfo:
     title: str
@@ -91,11 +146,11 @@ def extract_sections(pdf_path: str):
                 text=section_text,
                 page_start=page_start,
                 page_end=page_end,
-                
             )
         )
 
     return sections
+
 
 def extract_document(file_id: str):
     pages = doc_service.extract_pages(file_id)
@@ -121,29 +176,29 @@ def extract_document(file_id: str):
     }
 
 
-def chunk_sections(sections, chunk_size, overlap,):
+def chunk_sections(sections, chunk_size, overlap):
     results = []
+    dropped_data = 0
 
     splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
         model_name="text-embedding-3-small",
         chunk_size=chunk_size,
         chunk_overlap=overlap,
         add_start_index=True,
-        separators=["\n\n","\n",". "," ",""]
+        separators=["\n\n", "\n", ". ", " ", ""]
     )
 
     for section in sections:
-        docs = splitter.create_documents(
-            [section.text]
-        )
+        docs = splitter.create_documents([section.text])
 
         for doc in docs:
-            results.append(
-                {
-                    "doc": doc,
-                    "section": section,
-                }
-            )
+            if is_data_chunk(doc.page_content):
+                dropped_data += 1
+                continue
+            results.append({"doc": doc, "section": section})
+
+    if dropped_data:
+        print(f"  [chunking] dropped {dropped_data} data/table chunks (no narrative content)")
 
     return results
 
@@ -151,19 +206,15 @@ def chunk_sections(sections, chunk_size, overlap,):
 def find_page_for_chunk(char_start: int, char_end: int, page_map: list[dict]):
     page_start = None
     page_end = None
-    
+
     for page in page_map:
-        if (
-            page["char_start"] <= char_start < page["char_end"]
-        ):
+        if page["char_start"] <= char_start < page["char_end"]:
             page_start = page["page"]
-            
-        if (
-            page["char_start"] <= char_end < page["char_end"]
-        ):
+        if page["char_start"] <= char_end < page["char_end"]:
             page_end = page["page"]
         if page_start is not None and page_end is not None:
             break
+
     return page_start, page_end
 
 
@@ -183,7 +234,7 @@ def get_chunks(file_id: str, chunk_size: int, overlap: int):
         if char_start < 0:
             continue
         char_end = char_start + len(text) - 1
-        
+
         page_start = section.page_start
         page_end = section.page_end
 
