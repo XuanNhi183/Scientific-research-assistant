@@ -4,7 +4,6 @@ import os
 from schemas.document import UploadResponse, DocumentContentResponse
 from schemas.rag import QuestionRequest, AnswerResponse, AnalyzeRequest
 from schemas.chunk import Chunk
-from schemas.search import SearchRequest
 from dotenv import load_dotenv
 import uvicorn
 load_dotenv()
@@ -91,7 +90,7 @@ async def get_document_content(file_id: str):
 
 
 @app.post("/search/")
-async def search_documents(request: SearchRequest, top_k: int = 5):
+async def search_documents(request: QuestionRequest, top_k: int = 5):
     query_embedding = embedding_service.embed_query(request.question)
     results = chroma_service.search(query_embedding, top_k)
     return results

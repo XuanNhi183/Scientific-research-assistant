@@ -26,8 +26,7 @@ A robust, production-grade API backend featuring:
 │   ├── chunk.py               # Chunk & ChunkMetadata models
 │   ├── document.py            # Document upload/response models
 │   ├── paper.py               # Paper metadata models
-│   ├── rag.py                 # RAG query request/response models
-│   ├── search.py              # Vector search models
+│   ├── rag.py                 # RAG query/response models (QuestionRequest, AnswerResponse, AnalyzeRequest)
 │   └── section.py             # Section extraction models
 ├── service/                   # Core Business & RAG Logic
 │   ├── rag_service.py         # Orchestrates the full RAG pipeline (retrieve → generate)
