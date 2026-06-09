@@ -86,7 +86,13 @@ class RetrievalSimulator:
         target = random.choice(paper_chunks)
         distractors = random.sample(distractor_pool, min(3, len(distractor_pool)))
 
-        if roll < 0.40:
+        # Current Distribution:
+        # 35% EASY (Single chunk)
+        # 25% MEDIUM MULTI-HOP (2 chunks)
+        # 15% MEDIUM NOISY (1 chunk + 1 distractor)
+        # 15% HARD NOISY (1 chunk + 2 distractors)
+        # 10% HARD INSUFFICIENT (3 distractors)
+        if roll < 0.35:
             return self._easy(paper_id, title, target)
         elif roll < 0.60:
             return self._medium_multihop(paper_id, title, paper_chunks)

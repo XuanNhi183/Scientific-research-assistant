@@ -31,7 +31,7 @@ class LLMService:
             model=model,
             messages=[{"role": "user", "content": prompt}],
             max_tokens=512,
-            temperature=0.9,
+            temperature=0.6,
         )
         return response.choices[0].message.content.strip()
     
@@ -60,4 +60,4 @@ JSON BẮT BUỘC phải có đúng các key sau:
         )
         return response.choices[0].message.content.strip()
 
-llm_service = LLMService()
+llm_service = LLMService()
