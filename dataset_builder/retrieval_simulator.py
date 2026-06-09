@@ -1,15 +1,3 @@
-"""
-RetrievalSimulator: Simulates RAG retrieval scenarios to generate diverse SFT samples.
-
-Distribution (matches target 40% EASY / 35% MEDIUM / 25% HARD):
-
-  roll < 0.40  → EASY:   1 target chunk            (Positive QA)
-  roll < 0.60  → MEDIUM: 2 chunks, multi-hop Q     (Multi-Chunk QA)
-  roll < 0.75  → MEDIUM: target + 1 distractor     (Noisy Positive QA)
-  roll < 0.90  → HARD:   target + 2 distractors    (Noisy Positive QA)
-  roll < 1.00  → HARD:   3 distractors only        (Insufficient Info QA)
-"""
-
 import random
 from typing import Optional
 

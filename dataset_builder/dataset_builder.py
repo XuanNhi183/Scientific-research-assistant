@@ -67,11 +67,21 @@ def _sections_to_chunks(sections, chunk_size: int, overlap: int) -> list[Chunk]:
             continue
 
         # Filter 2: chunk looks like a reference list
-        # (more than 40% of lines start with [number] pattern)
-        lines = text.splitlines()
-        ref_lines = sum(1 for l in lines if re.match(r'^\s*\[\d+\]', l))
-        if len(lines) > 3 and ref_lines / len(lines) > 0.4:
-            continue
+        lines = [l.strip() for l in text.splitlines() if l.strip()]
+        if len(lines) > 2:
+            # Type A: Bracket references (e.g. "[1] Li Dong...")
+            bracket_refs = sum(1 for l in lines if re.match(r'^\[\d+\]', l))
+            if bracket_refs >= 1:
+                continue
+                
+            # Type B: Author/Title/Venue references (APA, Harvard, etc.)
+            # e.g., "Li, D. (2016). Deep learning... In Proceedings of..."
+            author_year_lines = sum(1 for l in lines if re.search(r'\(\d{4}\)', l))
+            venue_lines = sum(1 for l in lines if re.search(r'\b(In Proceedings|Journal of|arXiv preprint|vol\.|pp\.)\b', l, re.IGNORECASE))
+            
+            # Lower threshold: if >20% of lines look like citations, drop it
+            if (author_year_lines + venue_lines) / len(lines) > 0.2:
+                continue
         metadata = ChunkMetadata(
             paper_id="",   # filled in by caller
             title="",
