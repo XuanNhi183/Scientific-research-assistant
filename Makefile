@@ -28,7 +28,7 @@ server:
 	cd frontend && npm run dev
 
 dataset:
-	PYTHONPATH=. uv run python dataset_builder/build_dataset.py
+	PYTHONPATH=. uv run python -m dataset_builder.build_dataset
 
 dataset-config:
-	PYTHONPATH=. uv run python dataset_builder/build_dataset.py --config $(CONFIG)
+	PYTHONPATH=. uv run python -m dataset_builder.build_dataset --config $(CONFIG)

@@ -1,6 +1,9 @@
 import argparse
 import yaml
+from dotenv import load_dotenv
 from dataset_builder.dataset_builder import DatasetBuilder
+
+load_dotenv()
 
 
 def load_config(path: str) -> dict:

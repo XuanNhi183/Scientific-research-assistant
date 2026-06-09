@@ -1,13 +1,3 @@
-"""
-QAGenerator: Generates questions and answers using the OpenAI API.
-
-Two question modes:
-- Single-hop: question answerable from one chunk alone.
-- Multi-hop:  question requiring synthesis across two chunks from different sections.
-
-Answer generation reuses RAG_SYSTEM_PROMPT from prompt/rag_prompt.py.
-"""
-
 import json
 import os
 from openai import OpenAI
