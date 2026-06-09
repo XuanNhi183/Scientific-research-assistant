@@ -14,6 +14,7 @@ Chunk params match production: chunk_size=700, overlap=150.
 
 import os
 import json
+import re
 import time
 import random
 from collections import Counter
@@ -45,6 +46,27 @@ class _Section:
     page_end: int
 
 
+# ── Section quality filter ─────────────────────────────────────────────────────
+
+_SKIP_SECTIONS = {
+    "references", "bibliography", "acknowledgements",
+    "acknowledgments", "appendix", "about the author",
+    "funding", "conflict of interest", "declarations",
+    "author contributions",
+}
+
+def _is_valid_section(section) -> bool:
+    """Return False for noisy sections (References, Ack, etc.) or near-empty ones."""
+    title_lower = (section.title or "").lower().strip()
+    # Remove known noise section titles
+    if any(skip in title_lower for skip in _SKIP_SECTIONS):
+        return False
+    # Remove sections whose text is too short to contain meaningful content
+    if len(section.text.strip()) < 200:
+        return False
+    return True
+
+
 def _sections_to_chunks(sections, chunk_size: int, overlap: int) -> list[Chunk]:
     """Convert SectionInfo objects to Chunk objects using production chunk_sections()."""
     raw_docs = chunk_sections(sections, chunk_size, overlap)
@@ -54,6 +76,17 @@ def _sections_to_chunks(sections, chunk_size: int, overlap: int) -> list[Chunk]:
         section = item["section"]
         text = doc.page_content
         if not text.strip():
+            continue
+
+        # Filter 1: chunk too short to contain meaningful content
+        if len(text.strip()) < 300:
+            continue
+
+        # Filter 2: chunk looks like a reference list
+        # (more than 40% of lines start with [number] pattern)
+        lines = text.splitlines()
+        ref_lines = sum(1 for l in lines if re.match(r'^\s*\[\d+\]', l))
+        if len(lines) > 3 and ref_lines / len(lines) > 0.4:
             continue
         metadata = ChunkMetadata(
             paper_id="",   # filled in by caller
@@ -189,8 +222,16 @@ class DatasetBuilder:
         """Parse PDF → chunk → generate samples → write to JSONL."""
         # 1. Extract sections using production module
         sections = extract_sections(pdf_path)
+
+        # Filter out noisy sections (References, Acknowledgements, etc.)
+        before = len(sections)
+        sections = [s for s in sections if _is_valid_section(s)]
+        filtered = before - len(sections)
+        if filtered:
+            print(f"  [filter] dropped {filtered} noisy sections (References/Ack/etc.)")
+
         if len(sections) < 2:
-            print(f"  [skip] {paper_id}: too few sections ({len(sections)})")
+            print(f"  [skip] {paper_id}: too few sections after filtering ({len(sections)})")
             return
 
         # 2. Chunk using production settings

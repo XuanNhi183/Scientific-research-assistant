@@ -19,20 +19,37 @@ A robust, production-grade API backend featuring:
 ## Project Structure
 
 ```text
-├── main.py               # FastAPI entry point. Defines all API routes (e.g., /upload, /chat) and sets up the server.
-├── config/               # System configurations: loads environment variables and API keys from .env.
-├── schemas/              # Pydantic models: defines the strict data structures for API Requests & Responses.
-├── service/              # Core Business & RAG Logic:
-│   ├── rag.py            # Handles semantic search, context retrieval, and calling the LLM.
-│   └── document.py       # Handles PDF parsing, semantic chunking, and generating vector embeddings.
-├── prompt/               # Prompt Engineering: stores System Prompts and LLM templates for contextual answering.
-├── data/                 # Local Data Storage:
-│   ├── chroma/           # Persisted Vector Database storage (contains embedded chunks).
-│   └── uploads/          # Temporary storage for raw PDF files uploaded by users.
-├── utils/                # Helper utilities: text cleaning, formatting, or error handling functions.
-├── pyproject.toml        # Modern Python dependency management and project metadata (used with `uv`).
-├── Makefile              # Command shortcuts to run the server, linter, or tests quickly.
-└── .env.example          # Template file showing required environment variables (e.g., OPENAI_API_KEY).
+├── main.py                    # FastAPI entry point: defines all API routes (/upload, /chat, etc.)
+├── schemas/                   # Pydantic models: strict data structures for API Requests & Responses
+│   ├── chunk.py               # Chunk & ChunkMetadata models
+│   ├── document.py            # Document upload/response models
+│   ├── paper.py               # Paper metadata models
+│   ├── rag.py                 # RAG query request/response models
+│   ├── search.py              # Vector search models
+│   └── section.py             # Section extraction models
+├── service/                   # Core Business & RAG Logic
+│   ├── rag_service.py         # Orchestrates the full RAG pipeline (retrieve → generate)
+│   ├── document_service.py    # PDF ingestion: parsing, chunking, embedding & storing
+│   ├── chunking.py            # Section extraction & text splitting logic
+│   ├── embedding_service.py   # OpenAI embedding calls
+│   ├── chroma_service.py      # ChromaDB operations (upsert, query, delete)
+│   └── llm_service.py         # LLM API calls & prompt formatting
+├── prompt/
+│   └── rag_prompt.py          # System prompt template for contextual Q&A
+├── dataset_builder/           # Offline pipeline for generating SFT fine-tuning dataset
+│   ├── dataset_builder.py     # Orchestrator: download → chunk → generate → write JSONL
+│   ├── qa_generator.py        # Generates questions & answers via OpenAI
+│   ├── retrieval_simulator.py # Simulates RAG retrieval scenarios (EASY/MEDIUM/HARD)
+│   └── arxiv_downloader.py    # Downloads PDFs from arXiv by paper ID
+├── utils/
+│   └── processing_pdf.py      # PDF pre-processing helpers
+├── data/                      # Local data storage (git-ignored)
+│   ├── chroma/                # Persisted ChromaDB vector store
+│   ├── uploads/               # Temporary storage for uploaded PDFs
+│   └── dataset.jsonl          # Generated SFT dataset
+├── pyproject.toml             # Python dependency management (used with `uv`)
+├── Makefile                   # Shortcuts: `make server`, `make lint`, etc.
+└── .env.example               # Template for required environment variables
 ```
 
 ## Quick Start

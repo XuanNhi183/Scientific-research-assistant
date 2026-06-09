@@ -31,6 +31,21 @@ SPECULATIVE_TERMS = [
     "can be inferred", "implicitly", "appears to", "is suggested",
 ]
 
+# Diverse set of questions that are answerable from a paper in general,
+# but NOT from random distractor chunks — forces model to learn genuine refusal.
+_INSUFFICIENT_QUESTIONS = [
+    "What is the main contribution of this paper?",
+    "What dataset was used to evaluate the proposed method?",
+    "What are the reported accuracy or performance metrics of this model?",
+    "Who are the authors of this paper?",
+    "What baseline methods were compared in the experiments?",
+    "What is the proposed training objective or loss function?",
+    "What hardware or compute resources were used in the experiments?",
+    "What are the main limitations acknowledged by the authors?",
+    "What future work directions do the authors suggest?",
+    "What is the mathematical formulation of the proposed model?",
+]
+
 
 def is_bad_answer(answer: str) -> bool:
     a = answer.lower().strip()
@@ -173,9 +188,10 @@ class RetrievalSimulator:
 
     def _hard_insufficient(self, paper_id, distractors) -> dict:
         context = format_context(distractors)
+        question = random.choice(_INSUFFICIENT_QUESTIONS)
         return self._make_sample(
             paper_id, "HARD", "insufficient",
-            "What is the main contribution of this paper?",
+            question,
             context,
             "INSUFFICIENT_INFORMATION",
         )
