@@ -1,17 +1,3 @@
-"""
-DatasetBuilder: Orchestrates the full dataset generation pipeline.
-
-Flow:
-  Kaggle arxiv metadata (paper_id, title)
-    → ArxivDownloader (download PDF)
-    → extract_sections()       ← reuses service/chunking.py
-    → chunk_sections()         ← reuses service/chunking.py
-    → RetrievalSimulator       ← builds EASY/MEDIUM/HARD samples
-    → write JSONL
-
-Chunk params match production: chunk_size=700, overlap=150.
-"""
-
 import os
 import json
 import re
@@ -25,7 +11,6 @@ from dataset_builder.arxiv_downloader import ArxivDownloader
 from dataset_builder.qa_generator import QAGenerator
 from dataset_builder.retrieval_simulator import RetrievalSimulator
 
-# ── Reuse production chunking modules ─────────────────────────────────────────
 from service.chunking import extract_sections, chunk_sections
 from schemas.chunk import Chunk, ChunkMetadata
 from prompt.rag_prompt import RAG_SYSTEM_PROMPT
@@ -46,7 +31,6 @@ class _Section:
     page_end: int
 
 
-# ── Section quality filter ─────────────────────────────────────────────────────
 
 _SKIP_SECTIONS = {
     "references", "bibliography", "acknowledgements",
@@ -240,8 +224,10 @@ class DatasetBuilder:
             c.metadata.paper_id = paper_id
             c.metadata.title = title
 
-        if len(chunks) < 3:
-            print(f"  [skip] {paper_id}: too few chunks ({len(chunks)})")
+        # Need at least 5 chunks: guarantees enough variety for EASY/MEDIUM/HARD sampling
+        # and avoids wasting LLM calls on papers that are mostly data/references after filtering.
+        if len(chunks) < 5:
+            print(f"  [skip] {paper_id}: too few chunks after filtering ({len(chunks)}) — skipping")
             return
 
         print(f"  sections={len(sections)} chunks={len(chunks)}")
