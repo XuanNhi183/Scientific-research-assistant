@@ -20,6 +20,8 @@ A robust, production-grade API backend featuring:
 
 ```text
 ├── main.py                    # FastAPI entry point: defines all API routes (/upload, /chat, etc.)
+├── config/                    # Configuration files
+│   └── dataset_config.yaml    # Parameters for dataset generation (n_papers, categories, etc.)
 ├── schemas/                   # Pydantic models: strict data structures for API Requests & Responses
 │   ├── chunk.py               # Chunk & ChunkMetadata models
 │   ├── document.py            # Document upload/response models
@@ -37,6 +39,7 @@ A robust, production-grade API backend featuring:
 ├── prompt/
 │   └── rag_prompt.py          # System prompt template for contextual Q&A
 ├── dataset_builder/           # Offline pipeline for generating SFT fine-tuning dataset
+│   ├── build_dataset.py       # Entry point: reads config/dataset_config.yaml → runs pipeline
 │   ├── dataset_builder.py     # Orchestrator: download → chunk → generate → write JSONL
 │   ├── qa_generator.py        # Generates questions & answers via OpenAI
 │   ├── retrieval_simulator.py # Simulates RAG retrieval scenarios (EASY/MEDIUM/HARD)
@@ -54,27 +57,38 @@ A robust, production-grade API backend featuring:
 
 ## Quick Start
 
-### Start the Server
+### Start the API Server
 
 ```bash
-# Install dependencies and create a virtual environment using uv
+# Install dependencies (creates .venv automatically)
 uv sync
 
 # Activate the virtual environment
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-# Start the server (runs on http://localhost:8000)
-make server  # Or: uv run uvicorn main:app --reload
+# Start the FastAPI server (runs on http://localhost:8000)
+make run  # Or: PYTHONPATH=. uv run python main.py
+```
+
+### Build the Fine-Tuning Dataset
+
+Edit [`config/dataset_config.yaml`](config/dataset_config.yaml) to configure number of papers, categories, and output path, then run:
+
+```bash
+make dataset
+
+# To use a custom config file:
+make dataset-config CONFIG=config/my_config.yaml
 ```
 
 ## Tech Stack
 
 - **Framework**: Python 3.11+, FastAPI, LangChain
-- **Vector DB**: ChromaDB / Qdrant Client (Persistent vector storage)
-- **Document Processing**: PyMuPDF (fitz), DocLayout-YOLO (for layout analysis), RecursiveCharacterTextSplitter
-- **Embeddings**: OpenAI Embeddings
+- **Vector DB**: ChromaDB (Local persistent vector store)
+- **Document Processing**: PyMuPDF (fitz), DocLayout-YOLO (layout analysis), RecursiveCharacterTextSplitter
+- **Embeddings**: OpenAI Embeddings (`text-embedding-3-small`)
 - **LLMs**: OpenAI GPT-4o / GPT-4o-mini
-- **Package Manager**: `uv` (Blazing fast Python dependency manager)
+- **Package Manager**: `uv`
 
 ## Key Features
 

@@ -22,6 +22,8 @@ dependencies = [
     "chromadb>=1.5.9",
     "langchain-text-splitters>=1.1.2",
     "tiktoken>=0.13.0",
+    "pyyaml>=6.0",
+    "tenacity>=8.0.0",
     "npm>=0.1.1",
 ]
 

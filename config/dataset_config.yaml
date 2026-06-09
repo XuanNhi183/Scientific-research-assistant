@@ -1,0 +1,18 @@
+# ── Dataset Generation Configuration ─────────────────────────────────────────
+# Edit these parameters before running: make dataset
+
+dataset:
+  output_path: "data/dataset.jsonl"
+  samples_per_paper: 4        # Number of Q&A samples to generate per paper
+  chunk_size: 700             # Token size for each text chunk (match production)
+  overlap: 150                # Token overlap between consecutive chunks
+
+source:
+  kaggle_metadata_path: "data/arxiv-metadata.json"  # Path to Kaggle arXiv JSONL metadata
+  n_papers: 10                # Number of papers to process
+  min_year: 2018              # Skip papers older than this year (avoids scanned PDFs)
+  categories:                 # arXiv subject categories to include
+    - "cs.CL"                 # Computation and Language
+    - "cs.AI"                 # Artificial Intelligence
+    - "cs.LG"                 # Machine Learning
+    - "cs.IR"                 # Information Retrieval
