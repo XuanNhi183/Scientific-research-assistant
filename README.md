@@ -12,7 +12,7 @@ An intelligent, end-to-end scientific research assistant designed to parse, anal
 
 A robust, production-grade API backend featuring:
 - **FastAPI Core**: High-performance asynchronous API endpoints for document ingestion and contextual Q&A.
-- **Advanced Document Processing**: Parses PDFs, analyzes document layouts (YOLO), splits text into semantic chunks, and generates vector embeddings.
+- **Advanced Document Processing**: Parses PDFs using PyMuPDF, splits text into semantic chunks, and generates vector embeddings.
 - **Retrieval-Augmented Generation (RAG)**: Uses advanced vector search to fetch relevant evidence from papers before generating scientific answers.
 - **Contextual Grounding**: API supports receiving specific text snippets to force the AI to answer *only* based on that precise context.
 
@@ -30,7 +30,7 @@ A robust, production-grade API backend featuring:
 │   └── section.py             # Section extraction models
 ├── service/                   # Core Business & RAG Logic
 │   ├── rag_service.py         # Orchestrates the full RAG pipeline (retrieve → generate)
-│   ├── document_service.py    # PDF ingestion: parsing, chunking, embedding & storing
+│   ├── document_service.py    # PDF ingestion: parsing & storing
 │   ├── chunking.py            # Section extraction & text splitting logic
 │   ├── embedding_service.py   # OpenAI embedding calls
 │   ├── chroma_service.py      # ChromaDB operations (upsert, query, delete)
@@ -50,7 +50,7 @@ A robust, production-grade API backend featuring:
 │   ├── uploads/               # Temporary storage for uploaded PDFs
 │   └── dataset.jsonl          # Generated SFT dataset
 ├── pyproject.toml             # Python dependency management (used with `uv`)
-├── Makefile                   # Shortcuts: `make server`, `make lint`, etc.
+├── Makefile                   # Shortcuts: `make run`, `make dataset`, `make dataset-config`, etc.
 └── .env.example               # Template for required environment variables
 ```
 
@@ -84,9 +84,9 @@ make dataset-config CONFIG=config/my_config.yaml
 
 - **Framework**: Python 3.11+, FastAPI, LangChain
 - **Vector DB**: ChromaDB (Local persistent vector store)
-- **Document Processing**: PyMuPDF (fitz), DocLayout-YOLO (layout analysis), RecursiveCharacterTextSplitter
+- **Document Processing**: PyMuPDF (fitz) for text & page extraction, RecursiveCharacterTextSplitter for semantic chunking
 - **Embeddings**: OpenAI Embeddings (`text-embedding-3-small`)
-- **LLMs**: OpenAI GPT-4o / GPT-4o-mini
+- **LLMs**: OpenAI `gpt-4.1-mini` (Q&A), `gpt-4o-mini` (paper analysis)
 - **Package Manager**: `uv`
 
 ## Key Features
