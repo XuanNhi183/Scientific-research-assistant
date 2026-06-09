@@ -30,6 +30,11 @@ PASS: The answer is logically structured and directly responds to what was asked
 FAIL: The answer is incoherent, contradictory, or answers a different question.
 → Score: PASS or FAIL
  
+[A5] LANGUAGE CONSISTENCY
+PASS: The answer is entirely written in English.
+FAIL: The answer contains non-English text (except for proper nouns from the context).
+→ Score: PASS or FAIL
+ 
 === OUTPUT FORMAT ===
  
 Return ONLY a valid JSON object.
@@ -39,6 +44,7 @@ Return ONLY a valid JSON object.
   "a2_completeness": "PASS|FAIL",
   "a3_non_extractiveness": "PASS|FAIL",
   "a4_coherence": "PASS|FAIL",
+  "a5_language": "PASS|FAIL",
   "valid": true,
   "reason": "one sentence explaining the verdict"
 }

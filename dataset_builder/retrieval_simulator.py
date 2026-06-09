@@ -2,6 +2,7 @@ import random
 from typing import Optional
 
 from dataset_builder.qa_generator import QAGenerator
+from schemas.chunk import Chunk
 
 
 # ── Answer quality guards ──────────────────────────────────────────────────────
@@ -17,21 +18,6 @@ BAD_PATTERNS = [
 SPECULATIVE_TERMS = [
     "likely", "probably", "suggests", "implies", "may indicate",
     "can be inferred", "implicitly", "appears to", "is suggested",
-]
-
-# Diverse set of questions that are answerable from a paper in general,
-# but NOT from random distractor chunks — forces model to learn genuine refusal.
-_INSUFFICIENT_QUESTIONS = [
-    "What is the main contribution of this paper?",
-    "What dataset was used to evaluate the proposed method?",
-    "What are the reported accuracy or performance metrics of this model?",
-    "Who are the authors of this paper?",
-    "What baseline methods were compared in the experiments?",
-    "What is the proposed training objective or loss function?",
-    "What hardware or compute resources were used in the experiments?",
-    "What are the main limitations acknowledged by the authors?",
-    "What future work directions do the authors suggest?",
-    "What is the mathematical formulation of the proposed model?",
 ]
 
 
@@ -56,40 +42,86 @@ class RetrievalSimulator:
         self.qa = qa_generator
         self.system_prompt = system_prompt
 
+    def _get_hierarchical_distractors(self, target: Chunk, paper_chunks: list[Chunk], distractor_pool: list[Chunk], k: int) -> list[str]:
+        """
+        Selects k distractors hierarchically:
+        1. Same paper, different section
+        2. Same paper, same section, different chunk
+        3. Similar paper (same category)
+        4. Random paper
+        """
+        distractors = []
+        
+        # Level 1: same paper, different section
+        pool_l1 = [c for c in paper_chunks if c.metadata.section != target.metadata.section and c.chunk_id != target.chunk_id]
+        if pool_l1:
+            n1 = min(k, len(pool_l1))
+            sampled = random.sample(pool_l1, n1)
+            distractors.extend([c.text for c in sampled])
+        
+        # Level 2: same paper, same section, different chunk
+        if len(distractors) < k:
+            pool_l2 = [c for c in paper_chunks if c.metadata.section == target.metadata.section and c.chunk_id != target.chunk_id]
+            if pool_l2:
+                n2 = min(k - len(distractors), len(pool_l2))
+                sampled = random.sample(pool_l2, n2)
+                distractors.extend([c.text for c in sampled])
+
+        # Level 3: Similar paper (same category)
+        if len(distractors) < k and distractor_pool:
+            target_cat = target.metadata.category
+            pool_l3 = [c for c in distractor_pool if c.metadata.category == target_cat]
+            if pool_l3:
+                n3 = min(k - len(distractors), len(pool_l3))
+                sampled = random.sample(pool_l3, n3)
+                distractors.extend([c.text for c in sampled])
+
+        # Level 4: Random paper (if still not enough)
+        if len(distractors) < k and distractor_pool:
+            pool_l4 = [c for c in distractor_pool if c.metadata.category != target.metadata.category]
+            if pool_l4:
+                n4 = min(k - len(distractors), len(pool_l4))
+                sampled = random.sample(pool_l4, n4)
+                distractors.extend([c.text for c in sampled])
+                
+        return distractors
+
     def build_sample(
         self,
         paper_id: str,
         title: str,
-        paper_chunks: list,       # list[Chunk] from THIS paper
-        distractor_pool: list[str],  # chunk texts from OTHER papers
+        paper_chunks: list[Chunk],       # list[Chunk] from THIS paper
+        distractor_pool: list[Chunk],    # list[Chunk] from OTHER papers
     ) -> Optional[dict]:
         """
         Roll a random number to decide the sample type and build it.
         Returns a sample dict or None if generation fails.
         """
-        if len(paper_chunks) < 2 or len(distractor_pool) < 3:
+        if len(paper_chunks) < 2:
             return None
 
         roll = random.random()
         target = random.choice(paper_chunks)
-        distractors = random.sample(distractor_pool, min(3, len(distractor_pool)))
+        distractor_texts = self._get_hierarchical_distractors(target, paper_chunks, distractor_pool, 3)
 
-        # Current Distribution:
-        # 35% EASY (Single chunk)
-        # 25% MEDIUM MULTI-HOP (2 chunks)
-        # 15% MEDIUM NOISY (1 chunk + 1 distractor)
-        # 15% HARD NOISY (1 chunk + 2 distractors)
-        # 10% HARD INSUFFICIENT (3 distractors)
+        # We need at least enough distractors to fulfill the request. If we can't even get 1 distractor for noisy, skip.
+        # But we only need distractors for noisy and insufficient.
+        if roll >= 0.60 and len(distractor_texts) == 0:
+            return None
+
         if roll < 0.35:
             return self._easy(paper_id, title, target)
         elif roll < 0.60:
             return self._medium_multihop(paper_id, title, paper_chunks)
         elif roll < 0.75:
-            return self._medium_noisy(paper_id, title, target, distractors[:1])
+            return self._medium_noisy(paper_id, title, target, distractor_texts[:1])
         elif roll < 0.90:
-            return self._hard_noisy(paper_id, title, target, distractors[:2])
+            return self._hard_noisy(paper_id, title, target, distractor_texts[:2])
         else:
-            return self._hard_insufficient(paper_id, distractors[:3])
+            if len(distractor_texts) < 3:
+                # Not enough distractors for hard insufficient, fallback to noisy
+                return self._hard_noisy(paper_id, title, target, distractor_texts)
+            return self._hard_insufficient(paper_id, title, distractor_texts[:3])
 
     # ── private builders ──────────────────────────────────────────────────────
 
@@ -101,7 +133,7 @@ class RetrievalSimulator:
             return None
 
         context = format_context([target.text])
-        answer, difficulty = self._get_answer(questions[0], context, fallback_difficulty="EASY")
+        answer, difficulty = self._get_answer(questions[0], context, fallback_difficulty="EASY", question_type="positive")
         if answer != "INSUFFICIENT_INFORMATION" and len(answer.split()) < 10:
             return None
 
@@ -140,7 +172,7 @@ class RetrievalSimulator:
         chunks = [chunk_a.text, chunk_b.text]
         random.shuffle(chunks)
         context = format_context(chunks)
-        answer, difficulty = self._get_answer(questions[0], context, fallback_difficulty="MEDIUM")
+        answer, difficulty = self._get_answer(questions[0], context, fallback_difficulty="MEDIUM", question_type="multi_chunk")
 
         return self._make_sample(paper_id, difficulty, "multi_chunk", questions[0], context, answer)
 
@@ -154,7 +186,7 @@ class RetrievalSimulator:
         chunks = [target.text] + [d for d in distractors]
         random.shuffle(chunks)
         context = format_context(chunks)
-        answer, _ = self._get_answer(questions[0], context, fallback_difficulty="MEDIUM")
+        answer, _ = self._get_answer(questions[0], context, fallback_difficulty="MEDIUM", question_type="noisy_positive")
 
         return self._make_sample(
             paper_id, "MEDIUM", "noisy_positive",
@@ -172,7 +204,7 @@ class RetrievalSimulator:
         chunks = [target.text] + distractors
         random.shuffle(chunks)
         context = format_context(chunks)
-        answer, _ = self._get_answer(questions[0], context, fallback_difficulty="HARD")
+        answer, _ = self._get_answer(questions[0], context, fallback_difficulty="HARD", question_type="noisy_positive")
 
         return self._make_sample(
             paper_id, "HARD", "noisy_positive",
@@ -180,9 +212,21 @@ class RetrievalSimulator:
             section=target.metadata.section,
         )
 
-    def _hard_insufficient(self, paper_id, distractors) -> dict:
+    def _hard_insufficient(self, paper_id, title, distractors) -> Optional[dict]:
         context = format_context(distractors)
-        question = random.choice(_INSUFFICIENT_QUESTIONS)
+        
+        # Use Dynamic Unanswerable Question generation on one of the distractors
+        base_distractor = distractors[0]
+        questions = self.qa.generate_unanswerable_question(
+            chunk=base_distractor,
+            title=title,
+            section="Unknown",
+        )
+        if not questions:
+            return None
+            
+        question = questions[0]
+        
         return self._make_sample(
             paper_id, "HARD", "insufficient",
             question,
@@ -192,9 +236,11 @@ class RetrievalSimulator:
 
     # ── helpers ───────────────────────────────────────────────────────────────
 
-    def _get_answer(self, question: str, context: str, fallback_difficulty: str) -> tuple[str, str]:
+    def _get_answer(self, question: str, context: str, fallback_difficulty: str, question_type: str) -> tuple[str, str]:
         """Generate answer and return (answer, difficulty)."""
-        answer = self.qa.generate_answer(question, context, self.system_prompt)
+        answer = self.qa.generate_answer(question, context, self.system_prompt, question_type=question_type)
+        if answer is None:
+            return "INSUFFICIENT_INFORMATION", "HARD"
         if is_bad_answer(answer) or is_speculative(answer):
             return "INSUFFICIENT_INFORMATION", "HARD"
         return answer, fallback_difficulty

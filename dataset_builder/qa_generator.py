@@ -18,7 +18,7 @@ from prompt.single_hop_prompt import SINGLE_HOP_PROMPT
 from prompt.multi_hop_prompt import MULTI_HOP_PROMPT
 from prompt.question_validator_prompt import QUESTION_VALIDATOR_PROMPT
 from prompt.answer_validator_prompt import ANSWER_VALIDATOR_PROMPT
-
+from prompt.unanswerable_prompt import UNANSWERABLE_PROMPT
 
 class QAGenerator:
     def __init__(self, model: str = "gpt-4.1-mini"):
@@ -170,6 +170,12 @@ class QAGenerator:
                       f"Extractive={val.get('q1_extractiveness')}")
         return valid_qs
 
+    def generate_unanswerable_question(self, chunk: str, title: str, section: str = "Unknown") -> list[str]:
+        prompt = UNANSWERABLE_PROMPT.format(n=1, title=title, section=section, chunk=chunk)
+        raw = self._call_llm(prompt)
+        questions = self._parse_json_list(raw)
+        return questions
+
     @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=2, max=10))
     def generate_answer(
         self,
@@ -177,17 +183,26 @@ class QAGenerator:
         formatted_context: str,
         system_prompt: str,
         validate: bool = True,
+        question_type: str = "positive",
     ) -> str | None:
         """
         Generates an answer and optionally validates it with ANSWER_VALIDATOR_PROMPT.
         Returns the answer string if valid, or None if validation fails.
         Set validate=False to skip answer validation (e.g. for INSUFFICIENT_INFORMATION cases).
         """
+        # Dynamic length and synthesis rules
+        behavior_rules = "\n\nCRITICAL RULE: Your answer MUST be entirely in English, regardless of the context language.\nNEVER reference the chunks directly (e.g. do not say 'Chunk 1 states'). Synthesize seamlessly."
+        
+        if question_type in ["positive", "noisy_positive"]:
+            behavior_rules += "\nRULE: Answer concisely and directly without fluff."
+        elif question_type == "multi_chunk":
+            behavior_rules += "\nRULE: Provide a comprehensive synthesis. Explain the logical relationship bridging the concepts from the context."
+
         response = self.client.chat.completions.create(
             model=self.model,
             messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"[Context]\n{formatted_context}\n\n[Question]\n{question}"},
+                {"role": "system", "content": system_prompt + behavior_rules},
+                {"role": "user", "content": f"[Context]\n{formatted_context}\n\n[Question]\n{question}"}
             ],
             max_tokens=512,
             temperature=0.1,
@@ -206,5 +221,6 @@ class QAGenerator:
                   f"Faithful={val.get('a1_faithfulness')} | "
                   f"Complete={val.get('a2_completeness')} | "
                   f"NonExtract={val.get('a3_non_extractiveness')} | "
-                  f"Coherent={val.get('a4_coherence')}")
+                  f"Coherent={val.get('a4_coherence')} | "
+                  f"English={val.get('a5_language')}")
             return None

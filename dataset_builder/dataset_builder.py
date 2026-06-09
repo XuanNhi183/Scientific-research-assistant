@@ -125,8 +125,8 @@ class DatasetBuilder:
         self.qa_gen = QAGenerator()
         self.simulator = RetrievalSimulator(self.qa_gen, RAG_SYSTEM_PROMPT)
 
-        # Global pool of chunk texts from already-processed papers (for distractors)
-        self.distractor_pool: list[str] = []
+        # Global pool of chunks from already-processed papers (for distractors)
+        self.distractor_pool: list[Chunk] = []
 
         self._stats = Counter()
 
@@ -196,7 +196,8 @@ class DatasetBuilder:
                         errors += 1
                         continue
 
-                    self.process_paper(paper_id, title, pdf_path)
+                    category = row.get("categories", "").split(" ")[0] if "categories" in row else ""
+                    self.process_paper(paper_id, title, pdf_path, category)
                     processed += 1
 
                 except Exception as e:
@@ -212,7 +213,7 @@ class DatasetBuilder:
 
         self.print_stats()
 
-    def process_paper(self, paper_id: str, title: str, pdf_path: str):
+    def process_paper(self, paper_id: str, title: str, pdf_path: str, category: str = ""):
         """Parse PDF → chunk → generate samples → write to JSONL."""
         # 1. Extract sections using production module
         sections = extract_sections(pdf_path)
@@ -233,6 +234,7 @@ class DatasetBuilder:
         for c in chunks:
             c.metadata.paper_id = paper_id
             c.metadata.title = title
+            c.metadata.category = category
 
         # Need at least 5 chunks: guarantees enough variety for EASY/MEDIUM/HARD sampling
         # and avoids wasting LLM calls on papers that are mostly data/references after filtering.
@@ -242,8 +244,8 @@ class DatasetBuilder:
 
         print(f"  sections={len(sections)} chunks={len(chunks)}")
 
-        # 3. Only add to distractor pool AFTER we have enough (avoid same-paper contamination)
-        current_paper_texts = [c.text for c in chunks]
+        # 3. Chunks for this paper
+        current_paper_chunks = chunks
 
         # 4. Generate samples_per_paper samples
         generated = 0
@@ -264,7 +266,7 @@ class DatasetBuilder:
                 generated += 1
 
         # 5. Add this paper's chunks to the global distractor pool
-        self.distractor_pool.extend(current_paper_texts)
+        self.distractor_pool.extend(chunks)
         print(f"  generated={generated} | pool_size={len(self.distractor_pool)}")
 
     # ── Helpers ───────────────────────────────────────────────────────────────

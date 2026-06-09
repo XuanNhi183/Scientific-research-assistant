@@ -5,6 +5,7 @@ class ChunkMetadata(BaseModel):
     title: str
 
     section: str | None = None
+    category: str | None = None
 
     page_start: int | None = None
     page_end: int | None = None
