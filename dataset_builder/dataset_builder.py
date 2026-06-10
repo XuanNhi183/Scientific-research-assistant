@@ -152,7 +152,7 @@ class DatasetBuilder:
     def build_from_kaggle(
         self,
         json_path: str,
-        n_papers: int = 10,
+        n_papers: int,
         categories: list[str] | None = None,
         min_year: int = 2018,
     ):
