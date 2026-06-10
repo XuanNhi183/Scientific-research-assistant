@@ -1,11 +1,10 @@
+import re
 import random
 from typing import Optional
 
 from dataset_builder.qa_generator import QAGenerator
 from schemas.chunk import Chunk
 
-
-# ── Answer quality guards ──────────────────────────────────────────────────────
 
 BAD_PATTERNS = [
     "not specified", "not mentioned", "does not provide",
@@ -16,8 +15,10 @@ BAD_PATTERNS = [
 ]
 
 SPECULATIVE_TERMS = [
-    "likely", "probably", "suggests", "implies", "may indicate",
-    "can be inferred", "implicitly", "appears to", "is suggested",
+    "it is likely that", "it is probably", "we can assume",
+    "one might speculate", "it seems reasonable to conclude",
+    "outside the scope of the provided context",
+    "not explicitly covered", "beyond what is stated",
 ]
 
 
@@ -33,6 +34,41 @@ def is_speculative(answer: str) -> bool:
 
 def format_context(chunks: list[str]) -> str:
     return "\n\n".join(f"[Chunk {i+1}]\n{c}" for i, c in enumerate(chunks))
+
+
+def _is_citation_chunk(text: str) -> bool:
+    """
+    Detect chunks that are primarily citation/bibliography content with no
+    technical substance. Multi-hop questions over these always return
+    INSUFFICIENT_INFORMATION, corrupting the multi_chunk label.
+
+    Two independent detectors — either one firing is sufficient.
+
+    Detector A: >25% of lines start with [N] bracket references.
+    Detector B: >70% of lines are short (<80 chars) AND >10% of lines
+                contain venue/year keywords (Proceedings, arXiv, ICML, etc.)
+    """
+    lines = [l for l in text.splitlines() if l.strip()]
+    if not lines:
+        return False
+    n = len(lines)
+
+    # Detector A: numbered bracket reference list
+    bracket_refs = sum(1 for l in lines if re.match(r'^\s*\[\d+\]', l))
+    if bracket_refs / n > 0.25:
+        return True
+
+    # Detector B: un-bracketed bibliography (author/title/venue lines)
+    short_lines = sum(1 for l in lines if len(l.strip()) < 80)
+    venue_lines = sum(1 for l in lines if re.search(
+        r'\b(Proceedings|arXiv|Journal|Conference|Workshop|Transactions|'
+        r'CVPR|ICLR|NeurIPS|ICML|ACL|EMNLP|NAACL|AAAI|IJCAI|ECCV|ICCV)\b',
+        l, re.IGNORECASE
+    ))
+    if short_lines / n > 0.70 and venue_lines / n > 0.10:
+        return True
+
+    return False
 
 
 # ── RetrievalSimulator ─────────────────────────────────────────────────────────
@@ -51,52 +87,44 @@ class RetrievalSimulator:
         4. Random paper
         """
         distractors = []
-        
+
         # Level 1: same paper, different section
         pool_l1 = [c for c in paper_chunks if c.metadata.section != target.metadata.section and c.chunk_id != target.chunk_id]
         if pool_l1:
-            n1 = min(k, len(pool_l1))
-            sampled = random.sample(pool_l1, n1)
+            sampled = random.sample(pool_l1, min(k, len(pool_l1)))
             distractors.extend([c.text for c in sampled])
-        
+
         # Level 2: same paper, same section, different chunk
         if len(distractors) < k:
             pool_l2 = [c for c in paper_chunks if c.metadata.section == target.metadata.section and c.chunk_id != target.chunk_id]
             if pool_l2:
-                n2 = min(k - len(distractors), len(pool_l2))
-                sampled = random.sample(pool_l2, n2)
+                sampled = random.sample(pool_l2, min(k - len(distractors), len(pool_l2)))
                 distractors.extend([c.text for c in sampled])
 
-        # Level 3: Similar paper (same category)
+        # Level 3: similar paper (same category)
         if len(distractors) < k and distractor_pool:
             target_cat = target.metadata.category
             pool_l3 = [c for c in distractor_pool if c.metadata.category == target_cat]
             if pool_l3:
-                n3 = min(k - len(distractors), len(pool_l3))
-                sampled = random.sample(pool_l3, n3)
+                sampled = random.sample(pool_l3, min(k - len(distractors), len(pool_l3)))
                 distractors.extend([c.text for c in sampled])
 
-        # Level 4: Random paper (if still not enough)
+        # Level 4: any remaining paper
         if len(distractors) < k and distractor_pool:
             pool_l4 = [c for c in distractor_pool if c.metadata.category != target.metadata.category]
             if pool_l4:
-                n4 = min(k - len(distractors), len(pool_l4))
-                sampled = random.sample(pool_l4, n4)
+                sampled = random.sample(pool_l4, min(k - len(distractors), len(pool_l4)))
                 distractors.extend([c.text for c in sampled])
-                
+
         return distractors
 
     def build_sample(
         self,
         paper_id: str,
         title: str,
-        paper_chunks: list[Chunk],       # list[Chunk] from THIS paper
-        distractor_pool: list[Chunk],    # list[Chunk] from OTHER papers
+        paper_chunks: list[Chunk],
+        distractor_pool: list[Chunk],
     ) -> Optional[dict]:
-        """
-        Roll a random number to decide the sample type and build it.
-        Returns a sample dict or None if generation fails.
-        """
         if len(paper_chunks) < 2:
             return None
 
@@ -104,8 +132,6 @@ class RetrievalSimulator:
         target = random.choice(paper_chunks)
         distractor_texts = self._get_hierarchical_distractors(target, paper_chunks, distractor_pool, 3)
 
-        # We need at least enough distractors to fulfill the request. If we can't even get 1 distractor for noisy, skip.
-        # But we only need distractors for noisy and insufficient.
         if roll >= 0.60 and len(distractor_texts) == 0:
             return None
 
@@ -119,7 +145,6 @@ class RetrievalSimulator:
             return self._hard_noisy(paper_id, title, target, distractor_texts[:2])
         else:
             if len(distractor_texts) < 3:
-                # Not enough distractors for hard insufficient, fallback to noisy
                 return self._hard_noisy(paper_id, title, target, distractor_texts)
             return self._hard_insufficient(paper_id, title, distractor_texts[:3])
 
@@ -147,9 +172,16 @@ class RetrievalSimulator:
         if len(paper_chunks) < 2:
             return None
 
-        # Prefer chunks from DIFFERENT sections for richer multi-hop
+        # Filter out citation/bibliography chunks before picking — they have no
+        # technical content and cause INSUFFICIENT_INFORMATION answers with multi_chunk label.
+        content_chunks = [c for c in paper_chunks if not _is_citation_chunk(c.text)]
+        if len(content_chunks) < 2:
+            print(f"  [simulator] multi-hop skipped: <2 non-citation chunks available")
+            return None
+
+        # Prefer chunks from DIFFERENT sections for genuine cross-section synthesis
         sections = {}
-        for c in paper_chunks:
+        for c in content_chunks:
             sec = c.metadata.section or "Unknown"
             sections.setdefault(sec, []).append(c)
 
@@ -158,7 +190,7 @@ class RetrievalSimulator:
             chunk_a = random.choice(sections[sec_a])
             chunk_b = random.choice(sections[sec_b])
         else:
-            chunk_a, chunk_b = random.sample(paper_chunks, 2)
+            chunk_a, chunk_b = random.sample(content_chunks, 2)
 
         questions = self.qa.generate_multi_hop(
             chunk_a.text, chunk_b.text,
@@ -172,7 +204,15 @@ class RetrievalSimulator:
         chunks = [chunk_a.text, chunk_b.text]
         random.shuffle(chunks)
         context = format_context(chunks)
-        answer, difficulty = self._get_answer(questions[0], context, fallback_difficulty="MEDIUM", question_type="multi_chunk")
+        answer, difficulty = self._get_answer(
+            questions[0], context, fallback_difficulty="MEDIUM", question_type="multi_chunk"
+        )
+
+        # Discard instead of saving with wrong label — INSUF here means the question
+        # wasn't genuinely multi-hop, saving it corrupts the multi_chunk signal.
+        if answer == "INSUFFICIENT_INFORMATION":
+            print(f"  [simulator] multi-hop discarded: answer was INSUFFICIENT_INFORMATION")
+            return None
 
         return self._make_sample(paper_id, difficulty, "multi_chunk", questions[0], context, answer)
 
@@ -214,8 +254,7 @@ class RetrievalSimulator:
 
     def _hard_insufficient(self, paper_id, title, distractors) -> Optional[dict]:
         context = format_context(distractors)
-        
-        # Use Dynamic Unanswerable Question generation on one of the distractors
+
         base_distractor = distractors[0]
         questions = self.qa.generate_unanswerable_question(
             chunk=base_distractor,
@@ -224,20 +263,17 @@ class RetrievalSimulator:
         )
         if not questions:
             return None
-            
+
         question = questions[0]
-        
         return self._make_sample(
             paper_id, "HARD", "insufficient",
-            question,
-            context,
+            question, context,
             "INSUFFICIENT_INFORMATION",
         )
 
     # ── helpers ───────────────────────────────────────────────────────────────
 
     def _get_answer(self, question: str, context: str, fallback_difficulty: str, question_type: str) -> tuple[str, str]:
-        """Generate answer and return (answer, difficulty)."""
         answer = self.qa.generate_answer(question, context, self.system_prompt, question_type=question_type)
         if answer is None:
             return "INSUFFICIENT_INFORMATION", "HARD"
