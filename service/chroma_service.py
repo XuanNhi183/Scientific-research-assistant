@@ -64,4 +64,20 @@ class ChromaService:
 
         return chunks
     
+    def get_first_chunk(self, paper_id: str):
+        # Trích xuất đoạn văn đầu tiên (thường là Abstract/Giới thiệu/Tác giả)
+        # Sửa lỗi ChromaDB: Phải dùng $and khi có nhiều hơn 1 điều kiện
+        results = self.collection.get(
+            where={"$and": [{"paper_id": paper_id}, {"chunk_index": 0}]}
+        )
+        
+        if not results or not results.get("documents") or len(results["documents"]) == 0:
+            return None
+            
+        return {
+            "text": results["documents"][0],
+            "metadata": results["metadatas"][0],
+            "distance": 0.0 # Bỏ qua distance vì đây là trích xuất trực tiếp
+        }
+
 chroma_service = ChromaService(collection_name="document_chunks")

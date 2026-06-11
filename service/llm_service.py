@@ -4,9 +4,19 @@ import os
 
 class LLMService:
     def __init__(self):
-        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        # Client gốc dùng cho các tác vụ phức tạp (như tóm tắt JSON)
+        self.openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         
-    def generate_answer(self, question: str, context: str, model: str = "gpt-4o-mini") -> str:
+        # Client trỏ về Ollama chạy ở máy Windows hoặc Colab
+        ollama_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
+        self.local_client = OpenAI(
+            base_url=ollama_url,
+            api_key="ollama",
+            timeout=600.0,
+            default_headers={"ngrok-skip-browser-warning": "69420"}
+        )
+        
+    def generate_answer(self, question: str, context: str, model: str = "qwen2.5-rag") -> str:
         user_prompt = f"""
         [Question]
         {question}
@@ -14,20 +24,21 @@ class LLMService:
         [Context]
         {context}
         """
-        response = self.client.chat.completions.create(
+        response = self.local_client.chat.completions.create(
             model=model,
             messages=[
                 {"role": "system", 
                  "content": RAG_SYSTEM_PROMPT},
                 {"role": "user", 
                  "content": user_prompt}
-            ]
+            ],
+            temperature=0.1, # Đặt nhiệt độ thấp để tránh bịa chuyện
         )
         return response.choices[0].message.content.strip()
 
     def generate_raw(self, prompt: str, model: str = "gpt-4o-mini") -> str:
         """Raw completion without system prompt. Used for dataset question generation."""
-        response = self.client.chat.completions.create(
+        response = self.openai_client.chat.completions.create(
             model=model,
             messages=[{"role": "user", "content": prompt}],
             max_tokens=512,
@@ -50,7 +61,7 @@ JSON BẮT BUỘC phải có đúng các key sau:
 """
         user_prompt = f"Tiêu đề dự kiến: {title}\n\nVăn bản bài báo:\n{raw_text[:25000]}" # Limit text to avoid context overload
         
-        response = self.client.chat.completions.create(
+        response = self.openai_client.chat.completions.create(
             model=model,
             response_format={ "type": "json_object" },
             messages=[

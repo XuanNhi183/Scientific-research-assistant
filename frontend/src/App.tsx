@@ -158,8 +158,8 @@ export default function App() {
 
   // Initialize papers list from localStorage or PRELOADED data
   useEffect(() => {
-    // We changed the key to 'scimind_papers_v2' to automatically clear out old cached data
-    const saved = localStorage.getItem("scimind_papers_v2");
+    // We changed the key to 'researchos_papers_v2' to automatically clear out old cached data
+    const saved = localStorage.getItem("researchos_papers_v2");
     if (saved) {
       try {
         const parsed = JSON.parse(saved) as Paper[];
@@ -179,12 +179,12 @@ export default function App() {
 
   // Sync papers to localstorage on edits
   useEffect(() => {
-    localStorage.setItem("scimind_papers_v2", JSON.stringify(papers));
+    localStorage.setItem("researchos_papers_v2", JSON.stringify(papers));
   }, [papers]);
 
   // Load chats state
   useEffect(() => {
-    const savedChats = localStorage.getItem("scimind_conversations");
+    const savedChats = localStorage.getItem("researchos_conversations");
     if (savedChats) {
       try {
         setConversations(JSON.parse(savedChats));
@@ -196,7 +196,7 @@ export default function App() {
 
   // Load research activity history
   useEffect(() => {
-    const savedHistory = localStorage.getItem("scimind_research_history");
+    const savedHistory = localStorage.getItem("researchos_research_history");
     if (savedHistory) {
       try {
         setHistoryItems(JSON.parse(savedHistory));
@@ -215,7 +215,7 @@ export default function App() {
       [paperId]: msgs
     };
     setConversations(updated);
-    localStorage.setItem("scimind_conversations", JSON.stringify(updated));
+    localStorage.setItem("researchos_conversations", JSON.stringify(updated));
   };
 
   const activePaper = papers.find(p => p.id === selectedPaperId) || papers[0];
@@ -250,7 +250,7 @@ export default function App() {
 
     const updatedHistory = [newHistoryItem, ...historyItems.filter(h => h.question !== newHistoryItem.question)].slice(0, 8);
     setHistoryItems(updatedHistory);
-    localStorage.setItem("scimind_research_history", JSON.stringify(updatedHistory));
+    localStorage.setItem("researchos_research_history", JSON.stringify(updatedHistory));
 
     // Hold reference state then clear immediate client UI selection
     const currentPassageRef = passageReference;
@@ -282,7 +282,11 @@ export default function App() {
       if (data.sources && data.sources.length > 0) {
         // Lấy danh sách các trang không bị trùng lặp
         const uniquePages = Array.from(new Set(data.sources.map((s: any) => s.page)));
-        finalAnswer += `\n\n**Sources:** Trích xuất từ trang ${uniquePages.join(", ")} của tài liệu.`;
+        const isVietnamese = /[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/i.test(text) || /\b(là|của|bạn|ai|không|có|này)\b/i.test(text);
+        const sourceText = isVietnamese 
+            ? `Trích xuất từ trang ${uniquePages.join(", ")} của tài liệu.` 
+            : `Extracted from page(s) ${uniquePages.join(", ")} of the document.`;
+        finalAnswer += `\n\n**Sources:** ${sourceText}`;
       }
 
       // Build the AI message object
@@ -323,7 +327,7 @@ export default function App() {
   const handleClearTopHistoryList = () => {
     if (confirm("Do you want to clear the top question history list?")) {
       setHistoryItems([]);
-      localStorage.removeItem("scimind_research_history");
+      localStorage.removeItem("researchos_research_history");
     }
   };
 
@@ -338,7 +342,7 @@ export default function App() {
   };
 
   return (
-    <div id="scimind-main-container" className={`h-screen bg-[#fafaf9] flex flex-col font-sans text-gray-800 selection:bg-blue-100 selection:text-blue-900 overflow-hidden relative ${isDragging ? "select-none cursor-col-resize" : ""}`}>
+    <div id="researchos-main-container" className={`h-screen bg-[#fafaf9] flex flex-col font-sans text-gray-800 selection:bg-blue-100 selection:text-blue-900 overflow-hidden relative ${isDragging ? "select-none cursor-col-resize" : ""}`}>
       
       {!activePaper && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-md overflow-hidden">

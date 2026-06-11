@@ -63,7 +63,7 @@ app.post("/api/chat", async (req, res) => {
       ? paper.keyFindings.map((f: string) => `- ${f}`).join("\n")
       : "";
 
-    let systemInstruction = `Bạn là "SciMind AI" - trợ lý nghiên cứu khoa học chuyên sâu, có chuyên môn cao trong việc phân tích, tóm tắt và giải nghĩa các bài báo khoa học phức tạp.
+    let systemInstruction = `Bạn là "ResearchOS" - trợ lý nghiên cứu khoa học chuyên sâu, có chuyên môn cao trong việc phân tích, tóm tắt và giải nghĩa các bài báo khoa học phức tạp.
 Người dùng hiện đang đọc bài báo khoa học sau đây trong giao diện Split-Screen:
 
 --- BÀI BÁO ---

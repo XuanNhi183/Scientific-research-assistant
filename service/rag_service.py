@@ -23,6 +23,16 @@ class RAGService:
     def ask(self, question: str, paper_id: str | None = None, top_k: int = 5):
         query_embedding = embedding_service.embed_query(question)
         chunks = chroma_service.search(query_embedding, top_k, paper_id=paper_id)
+        
+        # GLOBAL CONTEXT INJECTION: Luôn luôn tiêm đoạn văn số 0 vào ngữ cảnh
+        if paper_id:
+            first_chunk = chroma_service.get_first_chunk(paper_id)
+            if first_chunk:
+                # Lọc bỏ first_chunk nếu nó đã tồn tại trong kết quả tìm kiếm
+                chunks = [c for c in chunks if c.get("metadata", {}).get("chunk_index") != 0]
+                # Sau đó luôn luôn nhét first_chunk lên ĐẦU danh sách
+                chunks.insert(0, first_chunk)
+                    
         context = self.build_context(chunks)
         answer = llm_service.generate_answer(question, context)
         sources = []

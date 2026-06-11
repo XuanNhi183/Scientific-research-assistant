@@ -37,7 +37,7 @@ _SKIP_SECTIONS = {
     "references", "bibliography", "acknowledgements",
     "acknowledgments", "appendix", "about the author",
     "funding", "conflict of interest", "declarations",
-    "author contributions",
+    "author contributions","reference","references"
 }
 
 def _is_valid_section(section) -> bool:

@@ -27,3 +27,5 @@ data/uploads
 
 scripts/
 evaluation/
+
+qwen2.5-7b-instruct.Q4_K_M.gguf

@@ -29,6 +29,3 @@ server:
 
 dataset:
 	PYTHONPATH=. uv run python -m dataset_builder.build_dataset
-
-dataset-config:
-	PYTHONPATH=. uv run python -m dataset_builder.build_dataset --config $(CONFIG)

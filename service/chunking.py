@@ -119,17 +119,32 @@ def extract_sections(pdf_path: str):
     if abstract_idx is None:
         abstract_idx = 0
 
-    headings = headings[abstract_idx:]
+    valid_headings = headings[abstract_idx:]
 
     sections = []
+    
+    # 1. Capture Metadata (Title, Authors, Affiliations) before the Abstract
+    metadata_end_idx = valid_headings[0]["index"] if valid_headings else len(lines)
+    if metadata_end_idx > 0:
+        metadata_lines = [line["text"] for line in lines[0:metadata_end_idx]]
+        if metadata_lines:
+            metadata_text = "Here are the authors and affiliations of this paper:\n\n" + "\n".join(metadata_lines)
+            sections.append(
+                SectionInfo(
+                    title="TITLE & AUTHORS",
+                    text=metadata_text,
+                    page_start=lines[0]["page"],
+                    page_end=lines[metadata_end_idx - 1]["page"],
+                )
+            )
 
-    for i in range(len(headings)):
-        current = headings[i]
-
+    # 2. Capture the rest of the headings
+    for i in range(len(valid_headings)):
+        current = valid_headings[i]
         start_idx = current["index"]
 
-        if i < len(headings) - 1:
-            end_idx = headings[i + 1]["index"]
+        if i < len(valid_headings) - 1:
+            end_idx = valid_headings[i + 1]["index"]
         else:
             end_idx = len(lines)
 
@@ -142,8 +157,8 @@ def extract_sections(pdf_path: str):
 
         page_start = current["page"]
 
-        if i < len(headings) - 1:
-            page_end = headings[i + 1]["page"]
+        if i < len(valid_headings) - 1:
+            page_end = valid_headings[i + 1]["page"]
         else:
             page_end = lines[-1]["page"]
 

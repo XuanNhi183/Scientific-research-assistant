@@ -166,7 +166,7 @@ export default function PaperReader({
 
   // Simulation download alert
   const handleDownloadMockPdf = () => {
-    alert(`Preparing download for the research PDF: \n"${paper.title}.pdf"\n\nThe document layout has been refined and optimized by SciMind.`);
+    alert(`Preparing download for the research PDF: \n"${paper.title}.pdf"\n\nThe document layout has been refined and optimized by ResearchOS.`);
   };
 
   return (
@@ -293,7 +293,7 @@ export default function PaperReader({
             >
               {/* Header simulation of professional publisher */}
               <div className="border-b border-gray-200 pb-2 mb-6 flex justify-between text-[11px] text-gray-400 font-sans tracking-wider select-none">
-                <span className="uppercase font-semibold">SciMind Academic Research Portal</span>
+                <span className="uppercase font-semibold">ResearchOS Academic Research Portal</span>
                 <span>Published: {paper.year || "2024"} | DOI: {paper.id}</span>
               </div>
 
