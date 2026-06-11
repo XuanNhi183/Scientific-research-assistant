@@ -20,8 +20,21 @@ class RAGService:
 
         return "\n\n".join(contexts)
     
-    def ask(self, question: str, paper_id: str | None = None, top_k: int = 5):
-        query_embedding = embedding_service.embed_query(question)
+    def ask(self, question: str, paper_id: str | None = None, top_k: int = 6):
+        # 1. Query Translation & Optimization (Advanced RAG)
+        # We rewrite the query to English to ensure perfect cosine similarity with English documents
+        rewrite_prompt = f"""You are a multilingual AI assistant.
+Your task is to translate the user's question into a natural language English question, which will be used to search a vector database.
+Keep the exact same semantic meaning and detail as the original question. Do not shorten it into keywords.
+Return ONLY the English question, without quotes, explanations, or extra text.
+
+User Question: {question}"""
+        search_query = llm_service.generate_raw(rewrite_prompt)
+        print(f"\n[RAG] Original Question: {question}")
+        print(f"[RAG] Optimized English Query: {search_query}")
+
+        # 2. Embed the English search query instead of the raw user question
+        query_embedding = embedding_service.embed_query(search_query)
         chunks = chroma_service.search(query_embedding, top_k, paper_id=paper_id)
         
         # GLOBAL CONTEXT INJECTION: Luôn luôn tiêm đoạn văn số 0 vào ngữ cảnh
