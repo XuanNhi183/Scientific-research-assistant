@@ -67,7 +67,7 @@ async def upload_file(file: UploadFile):
 
 @app.post("/ask_question/", response_model=AnswerResponse)
 def ask_question(request: QuestionRequest):
-    return rag_service.ask(request.question, request.paper_id, top_k=5)
+    return rag_service.ask(request.question, request.paper_id, top_k=3)
 
 
 @app.get("/document/{file_id}/chunks",response_model=list[Chunk])

@@ -80,4 +80,25 @@ class ChromaService:
             "distance": 0.0 # Bỏ qua distance vì đây là trích xuất trực tiếp
         }
 
+    def get_all_chunks(self, paper_id: str) -> list[dict]:
+        """Retrieves all chunks for a given paper_id, sorted by chunk_index."""
+        results = self.collection.get(
+            where={"paper_id": paper_id}
+        )
+        
+        if not results or not results.get("documents"):
+            return []
+            
+        chunks = []
+        for doc, meta in zip(results["documents"], results["metadatas"]):
+            chunks.append({
+                "text": doc,
+                "metadata": meta,
+                "distance": 0.0
+            })
+            
+        # Sort chunks by chunk_index to maintain document order
+        chunks.sort(key=lambda x: x["metadata"].get("chunk_index", 0))
+        return chunks
+
 chroma_service = ChromaService(collection_name="document_chunks")

@@ -22,9 +22,9 @@ RULES:
    Remember: Papers often do not explicitly say "Authors:". You must infer that the names under the title are the authors.
 
 4. LANGUAGE MATCHING
-   You MUST respond in the exact same language as the user's question.
+   You MUST respond in the exact same language as the user's primary language.
    If the question is in English → answer in English.
-   If the question is in Vietnamese → answer in Vietnamese (translate the English context if needed).
+   If the question is primarily in Vietnamese (even if it contains English keywords like "METHODOLOGY" or "Table 1") → you MUST translate the context and answer ENTIRELY in Vietnamese.
    Under NO circumstances should you output Chinese characters (Hanzi).
 
 5. REFUSING TO ANSWER (INSUFFICIENT_INFORMATION)
@@ -33,6 +33,7 @@ RULES:
    
    Do NOT return INSUFFICIENT_INFORMATION if:
    - The answer exists but is partially obscured by noise or symbols.
+   - The answer is only partially available (e.g., you found some formulas but not all of them). In this case, provide whatever you found.
    - The answer is in English but the question is in Vietnamese (translate it).
    - The answer requires synthesizing information from multiple chunks.
    - You simply find the question difficult.

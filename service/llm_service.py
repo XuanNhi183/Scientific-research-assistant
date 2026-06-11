@@ -1,4 +1,5 @@
 from prompt.rag_prompt import RAG_SYSTEM_PROMPT
+from prompt.router_prompt import ROUTER_PROMPT
 from openai import OpenAI
 import os
 
@@ -33,6 +34,46 @@ class LLMService:
                  "content": user_prompt}
             ],
             temperature=0.1, # Đặt nhiệt độ thấp để tránh bịa chuyện
+        )
+        return response.choices[0].message.content.strip()
+
+    def classify_query(self, query: str, model: str = "qwen2.5-rag") -> str:
+        """Classifies a query as either LOCAL or GLOBAL."""
+        response = self.local_client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": ROUTER_PROMPT},
+                {"role": "user", "content": query}
+            ],
+            temperature=0.0, # Deterministic classification
+        )
+        result = response.choices[0].message.content.strip().upper()
+        
+        if "GLOBAL" in result:
+            return "global"
+        elif "LOCAL" in result:
+            return "local"
+        else:
+            return "local" # fallback
+
+    def generate_global_answer(self, question: str, context: str, model: str = "gpt-4o-mini") -> str:
+        """Generates answer using GPT-4o-mini to handle large global contexts."""
+        user_prompt = f"""
+        [Question]
+        {question}
+        
+        [Context]
+        {context}
+        """
+        response = self.openai_client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", 
+                 "content": RAG_SYSTEM_PROMPT},
+                {"role": "user", 
+                 "content": user_prompt}
+            ],
+            temperature=0.1,
         )
         return response.choices[0].message.content.strip()
 
