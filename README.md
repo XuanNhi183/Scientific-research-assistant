@@ -177,7 +177,7 @@ Then update the `OLLAMA_BASE_URL` in `.env` to point the backend at the new mode
 
 | Model | Faithfulness | Relevance | Refusal Accuracy |
 |---|---|---|---|
-| Fine-tuned Qwen 1.5B | 3.60 / 5.0 | 3.62 / 5.0 | 100% (10/10) |
+| Fine-tuned Qwen2.5-7B | 3.60 / 5.0 | 3.62 / 5.0 | 100% (10/10) |
 
 - **Faithfulness**: How closely the model sticks to provided context without hallucinating (0.0–5.0).
 - **Relevance**: How directly the model addresses the specific query (0.0–5.0).
