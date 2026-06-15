@@ -1,0 +1,26 @@
+Metadata-Version: 2.4
+Name: researchrag
+Version: 0.1.0
+Summary: Research - AI scientific paper assistant with RAG and LangGraph
+Requires-Python: >=3.11
+Requires-Dist: python-multipart>=0.0.29
+Requires-Dist: pydantic>=2.8.0
+Requires-Dist: pymupdf>=1.24.0
+Requires-Dist: datasets>=2.20.0
+Requires-Dist: huggingface-hub>=0.23.0
+Requires-Dist: python-dotenv>=1.0.1
+Requires-Dist: python-multipart>=0.0.29
+Requires-Dist: openai>=1.0.0
+Requires-Dist: chromadb>=1.0.0
+Requires-Dist: langchain>=1.3.4
+Requires-Dist: fastapi>=0.115.0
+Requires-Dist: uvicorn[standard]>=0.34.0
+Requires-Dist: chromadb>=1.5.9
+Requires-Dist: langchain-text-splitters>=1.1.2
+Requires-Dist: tiktoken>=0.13.0
+Requires-Dist: pyyaml>=6.0
+Requires-Dist: tenacity>=8.0.0
+Requires-Dist: npm>=0.1.1
+Requires-Dist: tqdm>=4.66.0
+Requires-Dist: requests>=2.31.0
+Requires-Dist: marker-pdf
