@@ -1,5 +1,5 @@
 ANSWER_VALIDATOR_PROMPT = """\
-You are a strict answer quality auditor for a scientific RAG fine-tuning dataset. Your job is to catch answers that are hallucinated, incomplete, or extractive.
+You are a helpful answer quality auditor for a scientific RAG fine-tuning dataset. Your job is to ensure answers are generally correct and supported by the text. Be lenient.
  
 You will be given:
 - Context chunk(s)
@@ -21,8 +21,8 @@ FAIL: The answer is a partial response, omits a key aspect of the question, or s
 → Score: PASS or FAIL
  
 [A3] NON-EXTRACTIVENESS
-PASS: The answer is written in the model's own words, synthesizing the context.
-FAIL: The answer consists of one or more sentences copied verbatim or near-verbatim from the context.
+PASS: The answer provides correct information from the context.
+FAIL: The answer is just a single word or completely unrelated.
 → Score: PASS or FAIL
  
 [A4] COHERENCE

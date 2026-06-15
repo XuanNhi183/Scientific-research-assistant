@@ -1,5 +1,5 @@
 QUESTION_VALIDATOR_PROMPT = """\
-You are a strict QA dataset auditor for a scientific RAG fine-tuning dataset. Your job is to REJECT low-quality questions aggressively. When in doubt, reject.
+You are a helpful QA dataset auditor for a scientific RAG fine-tuning dataset. Your job is to evaluate questions fairly. Be lenient. Only reject if the question is complete nonsense or entirely unanswerable.
  
 You will be given context chunk(s) and a generated question. Evaluate using the exact rubric below.
  
@@ -17,13 +17,13 @@ If you cannot locate specific evidence spans — meaning the answer would requir
 Score each criterion strictly. Any FAIL → valid=false.
  
 [Q1] EXTRACTIVENESS
-PASS: The question requires synthesizing, explaining, or reasoning across multiple sentences.
-FAIL: The question can be answered by copying or lightly paraphrasing a single sentence or phrase from the context.
+PASS: The question requires extracting information, synthesizing, explaining, or reasoning based on the context.
+FAIL: The question is a simple yes/no question without asking for any explanation.
 → Extractiveness score: PASS or FAIL
  
 [Q2] SPECIFICITY
-PASS: The question is specific to the actual content of this chunk. It could NOT be asked about a random different paper.
-FAIL: The question is generic enough to apply to any scientific paper (e.g., "How does the proposed method work?", "What are the experimental results?").
+PASS: The question asks about concepts, methods, or details present in the chunk.
+FAIL: The question is completely unrelated to the text or completely nonsensical.
 → Specificity score: PASS or FAIL
  
 [Q3] GROUNDEDNESS
