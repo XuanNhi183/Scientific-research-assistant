@@ -161,16 +161,26 @@ class DatasetBuilder:
         categories = categories or ["cs.CL", "cs.AI", "cs.LG", "cs.IR"]
         pattern = "|".join(categories)
 
-        processed = 0
+        processed_paper_ids = set()
+        if os.path.exists(self.output_path):
+            with open(self.output_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    if not line.strip(): continue
+                    try:
+                        sample = json.loads(line)
+                        if "paper_id" in sample:
+                            processed_paper_ids.add(str(sample["paper_id"]))
+                    except json.JSONDecodeError:
+                        pass
+
+        processed = len(processed_paper_ids)
         errors = 0
         skipped_old = 0
         start = time.time()
 
         print(f"Starting dataset build | target: {n_papers} papers | min_year: {min_year}")
+        print(f"Resuming from existing file. {processed} papers already processed.")
         print(f"Output: {self.output_path}\n")
-
-        # Clear existing file to prevent appending old generated samples
-        open(self.output_path, "w", encoding="utf-8").close()
 
         for df_chunk in pd.read_json(json_path, lines=True, chunksize=5_000):
             filtered = df_chunk[
@@ -182,6 +192,10 @@ class DatasetBuilder:
                     break
 
                 paper_id = str(row["id"])
+                
+                if paper_id in processed_paper_ids:
+                    continue
+
                 normalized_id = ArxivDownloader.normalize_id(paper_id)
 
                 # Skip old-format IDs (e.g. "cs/0704.0047") — pre-2007 papers
