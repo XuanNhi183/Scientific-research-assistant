@@ -9,7 +9,7 @@ dataset:
 
 source:
   kaggle_metadata_path: "data/arxiv-metadata.json"  # Path to Kaggle arXiv JSONL metadata
-  n_papers: 10             # Number of papers to process
+  n_papers: 300             # Number of papers to process
   min_year: 2018              
   categories:                 # arXiv subject categories to include
     - "cs.CL"                 # Computation and Language

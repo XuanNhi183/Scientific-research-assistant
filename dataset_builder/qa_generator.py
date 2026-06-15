@@ -11,7 +11,7 @@ from prompt.answer_validator_prompt import ANSWER_VALIDATOR_PROMPT
 from prompt.unanswerable_prompt import UNANSWERABLE_PROMPT
 
 class QAGenerator:
-    def __init__(self, model: str = "gpt-4.1-mini"):
+    def __init__(self, model: str = "gpt-4o-mini"):
         self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.model = model
 

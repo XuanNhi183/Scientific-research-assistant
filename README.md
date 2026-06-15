@@ -55,7 +55,7 @@ The system follows a **Modular** design with four main components:
 │   ├── uploads/               # Temporary storage for uploaded PDFs
 │   └── dataset.jsonl          # Generated SFT dataset
 ├── docs/                      # Technical documentation and guides
-├── notebook/                  # Jupyter notebooks for QLoRA fine-tuning and evaluation
+├── notebook/                  # For run pipeline: Dataset generation, QLoRA fine-tuning and evaluation
 ├── scripts/                   # Debugging and utility scripts
 ├── Modelfile                  # Ollama Modelfile for loading the fine-tuned GGUF model
 ├── pyproject.toml             # Python dependency management (used with `uv`)
