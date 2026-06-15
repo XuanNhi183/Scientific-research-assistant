@@ -1,7 +1,8 @@
 from service.document_service import doc_service
 from langchain_text_splitters import RecursiveCharacterTextSplitter, MarkdownHeaderTextSplitter
-from marker.convert import convert_single_pdf
-from marker.models import load_all_models
+from marker.converters.pdf import PdfConverter
+from marker.models import create_model_dict
+from marker.output import text_from_rendered
 from schemas.chunk import Chunk, ChunkMetadata
 from uuid import uuid4
 import tiktoken
@@ -74,11 +75,13 @@ def is_data_chunk(text: str) -> bool:
     return sum(flags) >= 2
 
 def init_marker_models():
-    models = load_all_models()
-    return models
+    artifact_dict = create_model_dict()
+    converter = PdfConverter(artifact_dict=artifact_dict)
+    return converter
 
-def extract_with_marker(pdf_path:str, model_lst) -> str:
-    full_text, images, out_meta = convert_single_pdf(pdf_path, model_lst)
+def extract_with_marker(pdf_path: str, converter) -> str:
+    rendered = converter(pdf_path)
+    full_text, _, _ = text_from_rendered(rendered)
     return full_text
 
 def chunk_markdown(markdown_content:str)-> list[Chunk]:
