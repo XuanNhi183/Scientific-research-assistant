@@ -20,6 +20,7 @@ env/
 # folder for documentation
 docs/
 
+data/arxiv_pdfs
 data/chroma
 data/chunks
 data/evaluation

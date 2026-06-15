@@ -158,14 +158,6 @@ class DatasetBuilder:
         categories: list[str] | None = None,
         min_year: int = 2018,
     ):
-        """
-        Load paper metadata from the Kaggle arxiv JSONL file,
-        download each PDF, and generate samples.
-
-        Args:
-            min_year: Skip papers older than this year (default 2018).
-                      Old papers often have scanned/non-parseable PDFs.
-        """
         categories = categories or ["cs.CL", "cs.AI", "cs.LG", "cs.IR"]
         pattern = "|".join(categories)
 
@@ -239,6 +231,7 @@ class DatasetBuilder:
         """Parse PDF → chunk → generate samples → write to JSONL."""
         # 1. Extract sections using production module
         chunks = []
+        sections = None
         try:
             print(f"  [extractor] Using Marker for {pdf_path} ...")
             md_text = extract_with_marker(pdf_path, self.marker_models)
@@ -274,7 +267,8 @@ class DatasetBuilder:
             print(f"  [skip] {paper_id}: too few chunks after filtering ({len(chunks)}) — skipping")
             return
 
-        print(f"  sections={len(sections)} chunks={len(chunks)}")
+        num_sections = len(sections) if sections is not None else "N/A (marker)"
+        print(f"  sections={num_sections} chunks={len(chunks)}")
 
         # 3. Chunks for this paper
         current_paper_chunks = chunks
