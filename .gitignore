@@ -25,7 +25,8 @@ data/chunks
 data/evaluation
 data/uploads
 
-scripts/
+scripts/*
+!scripts/test_ingestion.py
 evaluation/
 
 qwen2.5-7b-instruct.Q4_K_M.gguf
