@@ -1,5 +1,7 @@
 from service.document_service import doc_service
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter, MarkdownHeaderTextSplitter
+from marker.convert import convert_single_pdf
+from marker.models import load_all_models
 from schemas.chunk import Chunk, ChunkMetadata
 from uuid import uuid4
 import tiktoken
@@ -71,6 +73,49 @@ def is_data_chunk(text: str) -> bool:
     # Require 2 of 3 signals — avoids false positives on result discussion sections
     return sum(flags) >= 2
 
+def init_marker_models():
+    models = load_all_models()
+    return models
+
+def extract_with_marker(pdf_path:str, model_lst) -> str:
+    full_text, images, out_meta = convert_single_pdf(pdf_path, model_lst)
+    return full_text
+
+def chunk_markdown(markdown_content:str)-> list[Chunk]:
+    headers_to_split_on = [
+        ("#", "Header 1"),
+        ("##", "Header 2"),
+        ("###", "Header 3"),
+    ]
+    markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=headers_to_split_on)
+    md_header_splits = markdown_splitter.split_text(markdown_content)
+    chunks = []
+    for i, doc in enumerate(md_header_splits):
+        text = doc.page_content
+        if not text.strip():
+            continue
+        langchain_meta = doc.metadata
+        section_title = langchain_meta.get("Header 3") or langchain_meta.get("Header 2") or langchain_meta.get("Header 1") or "Unknown"
+        
+        metadata = ChunkMetadata(
+            paper_id="",
+            title="",
+            section=section_title,
+            page_start=None,  
+            page_end=None,            
+        )
+        chunks.append(
+            Chunk(
+                chunk_id=str(uuid4()),
+                chunk_index=i,
+                text=text,
+                word_count=len(text.split()),
+                token_count=len(encoding.encode(text)),
+                metadata=metadata,
+            )
+        )
+    return chunks
+    
 
 @dataclass
 class SectionInfo:

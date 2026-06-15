@@ -11,7 +11,7 @@ from dataset_builder.arxiv_downloader import ArxivDownloader
 from dataset_builder.qa_generator import QAGenerator
 from dataset_builder.retrieval_simulator import RetrievalSimulator
 
-from service.chunking import extract_sections, chunk_sections
+from service.chunking import extract_sections, chunk_sections, init_marker_models, extract_with_marker, chunk_markdown
 from schemas.chunk import Chunk, ChunkMetadata
 from prompt.rag_prompt import RAG_SYSTEM_PROMPT
 
@@ -135,6 +135,8 @@ class DatasetBuilder:
         self.chunk_size = chunk_size
         self.overlap = overlap
         self.samples_per_paper = samples_per_paper
+        # Lưu ý: Thêm dấu ngoặc tròn () để gọi hàm
+        self.marker_models = init_marker_models()
 
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
@@ -236,21 +238,31 @@ class DatasetBuilder:
     def process_paper(self, paper_id: str, title: str, pdf_path: str, category: str = ""):
         """Parse PDF → chunk → generate samples → write to JSONL."""
         # 1. Extract sections using production module
-        sections = extract_sections(pdf_path)
+        chunks = []
+        try:
+            print(f"  [extractor] Using Marker for {pdf_path} ...")
+            md_text = extract_with_marker(pdf_path, self.marker_models)
+            chunks = chunk_markdown(md_text)
+            print("  [extractor] Marker processing was successful!")
+        except Exception as e:
+            print(f"  [extractor] Marker error ({e})")
+            sections = extract_sections(pdf_path)
 
-        # Filter out noisy sections (References, Acknowledgements, etc.)
-        before = len(sections)
-        sections = [s for s in sections if _is_valid_section(s)]
-        filtered = before - len(sections)
-        if filtered:
-            print(f"  [filter] dropped {filtered} noisy sections (References/Ack/etc.)")
+            # Filter out noisy sections (References, Acknowledgements, etc.)
+            before = len(sections)
+            sections = [s for s in sections if _is_valid_section(s)]
+            filtered = before - len(sections)
+            if filtered:
+                print(f"  [filter] dropped {filtered} noisy sections (References/Ack/etc.)")
 
-        if len(sections) < 2:
-            print(f"  [skip] {paper_id}: too few sections after filtering ({len(sections)})")
-            return
+            if len(sections) < 2:
+                print(f"  [skip] {paper_id}: too few sections after filtering ({len(sections)})")
+                return
 
-        # 2. Chunk using production settings
-        chunks = _sections_to_chunks(sections, self.chunk_size, self.overlap)
+            # 2. Chunk using production settings
+            chunks = _sections_to_chunks(sections, self.chunk_size, self.overlap)
+        
+        # Điền metadata chung cho tất cả các chunk (dù từ Marker hay PyMuPDF)
         for c in chunks:
             c.metadata.paper_id = paper_id
             c.metadata.title = title
