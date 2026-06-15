@@ -27,3 +27,5 @@ dependencies = [
     "marker-pdf",
 ]
 
+[tool.setuptools.packages.find]
+exclude = ["data*", "docs*", "frontend*", "img*", "notebook*"]
