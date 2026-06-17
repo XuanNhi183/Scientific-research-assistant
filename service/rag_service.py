@@ -27,7 +27,6 @@ class RAGService:
         query_lower = query.lower()
         # 1. Keyword-based section filtering to reduce noise and tokens
         if any(kw in query_lower for kw in ["công thức", "toán học", "phương trình", "formula", "equation", "math"]):
-            # Math regex to match LaTeX symbols or Variable = Value
             math_pattern = re.compile(r'\$.*?\$|\\frac|\\sum|\\int|[A-Za-z]\s*=\s*[A-Za-z0-9]', re.IGNORECASE)
             filtered = [c for c in all_chunks if math_pattern.search(c['text'])]
             if filtered:
@@ -87,6 +86,13 @@ User Question: {question}"""
             context = self.build_context(chunks)
             answer = llm_service.generate_answer(question, context)
 
+            # --- HYBRID FALLBACK LOGIC ---
+            if "INSUFFICIENT_INFORMATION" in answer and paper_id:
+                print("\n[FALLBACK] Local search failed (Insufficient Info). Triggering GLOBAL FALLBACK...")
+                chunks = self.get_global_context(paper_id, question)
+                context = self.build_context(chunks)
+                answer = llm_service.generate_global_answer(question, context)
+                query_type = "global_fallback"
         sources = []
         for chunk in chunks:
             meta = chunk.get("metadata", {})

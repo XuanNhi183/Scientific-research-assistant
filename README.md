@@ -131,7 +131,8 @@ User Question
     → Embed English query (text-embedding-3-small)
     → Vector search ChromaDB (Top-K chunks)
     → Context Injection: Forcibly prepends Chunk 0 (Title/Authors) to context.
-    → Qwen2.5-7B-Instruct generates answer (returns INSUFFICIENT_INFORMATION if missing).
+    → Qwen2.5-7B-Instruct generates answer.
+    → 🔄 HYBRID FALLBACK: If Qwen returns INSUFFICIENT_INFORMATION, query is instantly routed to the GLOBAL path.
   
   [If GLOBAL - Summarization/Map-Reduce]:
     → Fetch ALL chunks for the paper.
