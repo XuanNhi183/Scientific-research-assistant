@@ -16,7 +16,7 @@ The system follows a **Modular** design with four main components:
   - `gpt-4o-mini` (OpenAI) — JSON extraction, paper analysis, and dataset generation
   - `Qwen2.5-7B-Instruct` — local LLM via Ollama for RAG Q&A
 
-![System Architecture](img/sys_archi.png)
+![System Architecture](img/sys-archi.png)
 
 ---
 
@@ -146,6 +146,8 @@ User Question
 ---
 
 ## Offline Pipeline: Dataset Builder
+
+![Dataset Generation Pipeline](img/Dataset-Generation-Pipeline.png)
 
 The fine-tuning dataset pipeline lives in `dataset_builder/`, configured via `config/dataset_config.yaml`:
 
