@@ -16,7 +16,7 @@ The system follows a **Modular** design with four main components:
   - `gpt-4o-mini` (OpenAI) — JSON extraction, paper analysis, and dataset generation
   - `Qwen2.5-7B-Instruct` — local LLM via Ollama for RAG Q&A
 
-![System Architecture](img/system_architecture.png)
+![System Architecture](img/sys_archi.png)
 
 ---
 
@@ -120,17 +120,26 @@ When a user uploads a PDF, the following steps run through `document_service.py`
 
 ### Retrieval-Augmented Generation (RAG)
 
-When a user asks a question, `rag_service.py` and `llm_service.py` execute:
+When a user asks a question, `rag_service.py` uses an **Agentic Router** to classify the query intent:
 
 ```text
 User Question
-  → Embed question (text-embedding-3-small)
-  → Vector search ChromaDB (Top-5 chunks, filtered by paper_id)
-  → Context ordering: Chunk 0 (Title/Authors) forced to position #1 to prevent "Lost in the Middle"
-  → Detect question language (Vietnamese / English) → instruct LLM to reply in same language
-  → Qwen2.5-7B-Instruct generates answer (returns INSUFFICIENT_INFORMATION if context is missing)
-  → API returns answer + source list (page references)
-  → React Frontend renders source UI in matching language
+  → Router (classify_query) decides routing path: [LOCAL] or [GLOBAL]
+  
+  [If LOCAL - Specific factual search]:
+    → Query Translation: Translates user question to an optimized English search query.
+    → Embed English query (text-embedding-3-small)
+    → Vector search ChromaDB (Top-K chunks)
+    → Context Injection: Forcibly prepends Chunk 0 (Title/Authors) to context.
+    → Qwen2.5-7B-Instruct generates answer (returns INSUFFICIENT_INFORMATION if missing).
+  
+  [If GLOBAL - Summarization/Map-Reduce]:
+    → Fetch ALL chunks for the paper.
+    → Keyword Filtering: Keeps only chunks with Math/Table keywords if applicable.
+    → Truncation: Caps at 100k tokens (keeps Abstract + Conclusion if oversized).
+    → GPT-4o-mini generates comprehensive global summary.
+
+  → API returns answer + precise source list (page & chunk references)
 ```
 
 ---
@@ -140,8 +149,8 @@ User Question
 The fine-tuning dataset pipeline lives in `dataset_builder/`, configured via `config/dataset_config.yaml`:
 
 1. **Data Sourcing**: Reads `arxiv-metadata.json` from the [Cornell University arXiv Dataset](https://www.kaggle.com/datasets/Cornell-University/arxiv) (Kaggle), filters by category (`cs.AI`, `cs.CL`), and auto-downloads PDFs via `ArxivDownloader`.
-2. **Chunking**: Reuses the same Production chunking module to ensure the model trains on real-world format.
-3. **Reasoning-Heavy QA Generation** (`qa_generator.py`): Forces comparative, trade-off, and cross-section questions — extractive/copy-paste questions are explicitly banned.
+2. **Data Extraction & Chunking**: Uses **Marker** (a deep learning vision/OCR model) to convert PDFs into highly accurate Markdown (preserving tables and math formulas), then chunks using `MarkdownHeaderTextSplitter`. If Marker fails, it automatically falls back to the Production PyMuPDF pipeline.
+3. **Reasoning-Heavy QA Generation** (`qa_generator.py`): Uses an Agentic workflow to generate `single_hop`, `multi_hop`, and `unanswerable` questions. It uses dual-validators (`question_validator`, `answer_validator`) to self-correct and filter out low-quality/extractive data.
 4. **Retrieval Simulation** (`retrieval_simulator.py`): Distributes context difficulty:
    - **35% EASY**: 1 highly relevant chunk.
    - **40% MEDIUM**: 2 chunks with split information, or 1 correct + 1 distractor.
@@ -193,7 +202,7 @@ Then update the `OLLAMA_BASE_URL` in `.env` to point the backend at the new mode
 |---|---|
 | Framework | Python 3.11+, FastAPI, LangChain |
 | Vector DB | ChromaDB (local persistent) |
-| Document Processing | PyMuPDF (fitz), RecursiveCharacterTextSplitter |
+| Document Processing | PyMuPDF (Online), Marker (Offline), Recursive/Markdown TextSplitters |
 | Embeddings | OpenAI `text-embedding-3-small` |
 | LLMs | OpenAI `gpt-4o-mini`, Qwen2.5-7B-Instruct (Ollama) |
 | Fine-Tuning | Unsloth, TRL SFTTrainer, QLoRA |
