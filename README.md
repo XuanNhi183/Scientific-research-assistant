@@ -241,4 +241,5 @@ Then update the `OLLAMA_BASE_URL` in `.env` to point the backend at the new mode
 | Embeddings | OpenAI `text-embedding-3-small` |
 | LLMs | OpenAI `gpt-4o-mini`, Qwen2.5-7B-Instruct (Ollama) |
 | Fine-Tuning | Unsloth, TRL SFTTrainer, QLoRA |
+| Evaluation | vLLM (Batch Inference), LLM-as-a-Judge (GPT-4o-mini) |
 | Package Manager | `uv` |
