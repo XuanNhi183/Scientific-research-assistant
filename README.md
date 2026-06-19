@@ -41,7 +41,13 @@ The system follows a **Modular** design with four main components:
 │   ├── chroma_service.py      # ChromaDB operations (upsert, query, delete)
 │   └── llm_service.py         # LLM API calls & prompt formatting
 ├── prompt/
-│   └── rag_prompt.py          # System prompt template for contextual Q&A
+│   ├── answer_validator_prompt.py   # AI Agent prompt to validate generated answers
+│   ├── multi_hop_prompt.py          # Prompt to generate complex, multi-chunk questions
+│   ├── question_validator_prompt.py # AI Agent prompt to filter out bad questions
+│   ├── rag_prompt.py                # System prompt template for contextual RAG Q&A
+│   ├── router_prompt.py             # Prompt to route Local vs Global queries
+│   ├── single_hop_prompt.py         # Prompt to generate simple, direct questions
+│   └── unanswerable_prompt.py       # Prompt to generate tricky questions without context
 ├── dataset_builder/           # Offline pipeline for generating SFT fine-tuning dataset
 │   ├── build_dataset.py       # Entry point: reads config/dataset_config.yaml → runs pipeline
 │   ├── dataset_builder.py     # Orchestrator: download → chunk → generate → write JSONL
@@ -137,9 +143,9 @@ make dataset-config CONFIG=config/my_config.yaml
 When a user uploads a PDF, the following steps run through `document_service.py` and `chunking.py`:
 
 1. **Storage**: PDF saved to `data/uploads/` with a generated UUID (`file_id`).
-2. **Text Extraction**: PyMuPDF (`fitz`) reads each page and extracts raw text.
-3. **Section Identification**: Headings detected via font size and bold formatting. Noisy sections (`References`, `Acknowledgements`, `Appendix`, `Declarations`) are automatically filtered.
-4. **Semantic Chunking**: `RecursiveCharacterTextSplitter` splits text (`chunk_size=700`, `overlap=150`). Chunks that are too short or contain excessive noise characters are discarded.
+2. **Text Extraction (Marker OCR)**: Uses `marker` to robustly convert PDFs into Markdown (preserving tables and formulas). Falls back to PyMuPDF (`fitz`) if Marker fails.
+3. **Section Identification**: Noisy sections (`References`, `Acknowledgements`, `Appendix`, `Declarations`) are automatically filtered out using regex or font heuristics.
+4. **Semantic Chunking**: `MarkdownHeaderTextSplitter` intelligently splits the paper by Markdown headers. If a section is still too long, `RecursiveCharacterTextSplitter` is applied (`chunk_size=700`, `overlap=150`).
 5. **Embedding & Storage**: Each chunk is vectorized via `text-embedding-3-small` and stored in ChromaDB alongside metadata (`paper_id`, `section`, `page`, `chunk_index`).
 6. **Full Paper Analysis**: `gpt-4o-mini` automatically extracts a structured JSON summary including Abstract, Metrics, Key Findings, and Glossary on upload.
 
