@@ -30,4 +30,4 @@ scripts/*
 !scripts/test_ingestion.py
 evaluation/
 
-qwen2.5-7b-instruct.Q4_K_M.gguf
+qwen2.5-7b-rag-lora-q4_k_m.gguf

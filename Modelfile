@@ -1,11 +1,17 @@
-FROM ./qwen2.5-7b-instruct.Q4_K_M.gguf
-PARAMETER num_ctx 2048
+# ========================================================================
+# [OPTION 1] IF YOU HAVE DOWNLOADED THE GGUF FILE LOCALLY (UNCOMMENT BELOW):
+FROM ./qwen2.5-7b-rag-lora-q4_k_m.gguf
+#
+# [OPTION 2] AUTOMATICALLY PULL FROM HUGGINGFACE (FOR OTHER USERS CLONING THE REPO):
+# FROM hf.co/xunnhi/Qwen2.5-7B-RAG-LoRA
+# ========================================================================
+
 TEMPLATE """{{ if .System }}<|im_start|>system
 {{ .System }}<|im_end|>
 {{ end }}{{ if .Prompt }}<|im_start|>user
 {{ .Prompt }}<|im_end|>
 {{ end }}<|im_start|>assistant
 """
-PARAMETER stop "<|im_start|>"
 PARAMETER stop "<|im_end|>"
-PARAMETER stop "<|endoftext|>"
+PARAMETER stop "<|im_start|>"
+PARAMETER temperature 0.1

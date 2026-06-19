@@ -33,7 +33,7 @@ The system follows a **Modular** design with four main components:
 │   ├── paper.py               # Paper metadata models
 │   ├── rag.py                 # RAG query/response models (QuestionRequest, AnswerResponse, AnalyzeRequest)
 │   └── section.py             # Section extraction models
-├── service/
+├── service/                   # Core Business & RAG Logic
 │   ├── rag_service.py         # Orchestrates the full RAG pipeline (retrieve → generate)
 │   ├── document_service.py    # PDF ingestion: parsing & storing
 │   ├── chunking.py            # Section extraction & text splitting logic
@@ -54,9 +54,7 @@ The system follows a **Modular** design with four main components:
 │   ├── chroma/                # Persisted ChromaDB vector store
 │   ├── uploads/               # Temporary storage for uploaded PDFs
 │   └── dataset.jsonl          # Generated SFT dataset
-├── docs/                      # Technical documentation and guides
 ├── notebook/                  # For run pipeline: Dataset generation, QLoRA fine-tuning and evaluation
-├── scripts/                   # Debugging and utility scripts
 ├── Modelfile                  # Ollama Modelfile for loading the fine-tuned GGUF model
 ├── pyproject.toml             # Python dependency management (used with `uv`)
 ├── Makefile                   # Shortcuts: `make run`, `make dataset`, `make dataset-config`
@@ -65,34 +63,61 @@ The system follows a **Modular** design with four main components:
 
 ---
 
-## Quick Start
+## How to Run Locally
 
-### 1. Environment Variables
+Follow these steps to launch the entire ResearchOS system (AI Model, Backend, and Frontend) on your local machine.
 
-Copy the example env file and populate your API keys:
+### 1. Start the Fine-Tuned AI Model
+You can run the GGUF model either entirely locally (if you have a dedicated GPU) or via Google Colab.
 
+**Option A: Run Locally (Recommended for machines with GPU)**
+1. Install [Ollama](https://ollama.com/) on your machine.
+2. Open a terminal in the `backend/` folder and build the model using the provided Modelfile:
+   ```bash
+   ollama create qwen2.5-rag -f Modelfile
+   ```
+
+**Option B: Run on Google Colab (For machines without GPU)**
+1. Upload and open the [`notebook/ResearchOS_ngrok.ipynb`](notebook/ResearchOS_ngrok.ipynb) notebook in Google Colab.
+2. Insert your Ngrok Auth Token in the designated cell (Step 7).
+3. Run all cells to start the Ollama server and download the GGUF model.
+4. Copy the generated public Ngrok URL (e.g., `https://xxxx.ngrok-free.app/v1`).
+
+### 2. Configure Environment Variables
+Copy the template environment file:
 ```bash
 cp .env.example .env
 ```
+Open the `.env` file and set the `OLLAMA_BASE_URL` based on your chosen option:
+```env
+# If using Option A (Local):
+OLLAMA_BASE_URL="http://localhost:11434/v1"
 
-Set `OLLAMA_BASE_URL` in `.env`:
-- Running Ollama locally: `http://localhost:11434/v1`
-- Running Ollama on Google Colab via Ngrok: `https://xxxx.ngrok-free.app/v1`
+# If using Option B (Colab + Ngrok):
+# OLLAMA_BASE_URL="https://xxxx.ngrok-free.app/v1"
 
-### 2. Start the API Server
-
-```bash
-# Install dependencies (creates .venv automatically)
-uv sync
-
-# Activate the virtual environment
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-
-# Start the FastAPI server (runs on http://localhost:8000)
-make run  # Or: PYTHONPATH=. uv run python main.py
+# Also make sure to fill in your OPENAI_API_KEY
 ```
 
-### 3. Build the Fine-Tuning Dataset
+### 3. Start the Backend (FastAPI)
+Open a terminal in the project root (`backend/` folder) and run:
+```bash
+# Install dependencies if you haven't already
+uv sync
+
+# Start the FastAPI backend server (runs on http://localhost:8000)
+make run
+```
+
+### 4. Start the Frontend (React UI)
+Open a **new** terminal in the project root (`backend/` folder) and run:
+```bash
+# Start the Vite React development server
+make server
+```
+*The interactive UI will now be accessible in your browser, typically at `http://localhost:5173`.*
+
+## Building the Fine-Tuning Dataset
 
 Edit [`config/dataset_config.yaml`](config/dataset_config.yaml) to configure `n_papers`, `categories`, and output path, then run:
 
@@ -170,7 +195,7 @@ Training is done with **Unsloth** and **TRL SFTTrainer** on Google Colab (GPU T4
 | Parameter | Value |
 |---|---|
 | Base Model | `unsloth/Qwen2.5-7B-Instruct` |
-| Dataset | `xunnhi/QA-Dataset-Generator` (~700 samples, ChatML format) |
+| Dataset | `xunnhi/QA-Dataset-Generator` (1156 samples, ChatML format) |
 | Max Sequence Length | `2048` |
 | Fine-Tuned Model | [`xunnhi/Qwen2.5-7B-RAG-LoRA`](https://huggingface.co/xunnhi/Qwen2.5-7B-RAG-LoRA) |
 ### Deploying the Fine-Tuned Model
@@ -189,13 +214,14 @@ Then update the `OLLAMA_BASE_URL` in `.env` to point the backend at the new mode
 
 | Model | Faithfulness | Relevance | Refusal Accuracy |
 |---|---|---|---|
-| Fine-tuned Qwen2.5-7B | 3.60 / 5.0 | 3.62 / 5.0 | 100% (10/10) |
+| Fine-tuned Qwen2.5-7B (v1 - PyMuPDF Extraction) | 3.60 / 5.0 | 3.62 / 5.0 | 100% (10/10) |
+| Fine-tuned Qwen2.5-7B (v2 - Marker + Semantic Chunking) | 4.16 / 5.0 | 4.20 / 5.0 | 90.0% (9/10) |
 
 - **Faithfulness**: How closely the model sticks to provided context without hallucinating (0.0–5.0).
 - **Relevance**: How directly the model addresses the specific query (0.0–5.0).
 - **Refusal Accuracy**: Correctly returning `INSUFFICIENT_INFORMATION` when context is absent.
 
-> The fine-tuned model achieves perfect refusal accuracy — it never hallucinates when context is missing. Comparison against OpenAI API baselines is pending.
+> Switching the PDF extraction pipeline from standard PyMuPDF to **Marker (OCR & Markdown)** combined with **Semantic Chunking (MarkdownHeaderTextSplitter)** significantly improved both Faithfulness and Relevance. By preserving the structural context of the papers (tables, math formulas, headers), the model is able to extract and synthesize information much more accurately.
 
 ---
 
