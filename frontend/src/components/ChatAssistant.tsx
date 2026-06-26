@@ -4,6 +4,10 @@
  */
 
 import React, { useRef, useEffect } from "react";
+import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css'; // `rehype-katex` does not import the CSS for you
 import { ChatMessage, Paper, HistoryItem } from "../types";
 import {
   Send,
@@ -90,112 +94,45 @@ export default function ChatAssistant({
 
   const presetPrompts = getPresetPrompts(paper?.id);
 
-  // Elite formatter translating basic markdown, bullet points, headers, inline codes and block equations beautifully
   const renderFormattedMessage = (text: string) => {
-    const lines = text.split("\n");
-    return lines.map((line, idx) => {
-      let trimmed = line.trim();
-
-      // Check code blocks
-      if (trimmed.startsWith("```")) {
-        return null; // Skip markdown wrappers visually
-      }
-
-      // Check header H3
-      if (trimmed.startsWith("###")) {
-        return (
-          <h4 key={idx} className="text-sm font-bold text-gray-800 mt-3 mb-1.5 font-sans flex items-center">
-            <span className="w-1.5 h-3.5 bg-blue-500 rounded mr-2 inline-block"></span>
-            {trimmed.replace(/^###\s*/, "")}
-          </h4>
-        );
-      }
-
-      // Check header H2
-      if (trimmed.startsWith("##")) {
-        return (
-          <h3 key={idx} className="text-base font-serif font-bold text-blue-900 mt-4 mb-2">
-            {trimmed.replace(/^##\s*/, "")}
-          </h3>
-        );
-      }
-
-      // Check bullet items
-      if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
-        const cleanContent = trimmed.replace(/^[-*]\s*/, "");
-        return (
-          <ul key={idx} className="list-disc pl-5 my-1 text-gray-700 space-y-1">
-            <li className="text-sm md:text-base leading-relaxed">{parseInlineStyles(cleanContent)}</li>
-          </ul>
-        );
-      }
-
-      // Check numbered items
-      const numberedMatch = trimmed.match(/^(\d+)\.\s(.*)/);
-      if (numberedMatch) {
-        return (
-          <ol key={idx} className="list-decimal pl-5 my-1 text-gray-700 space-y-1">
-            <li className="text-sm md:text-base leading-relaxed">{parseInlineStyles(numberedMatch[2])}</li>
-          </ol>
-        );
-      }
-
-      // Blockquotes or formulas
-      if (trimmed.startsWith(">")) {
-        return (
-          <blockquote key={idx} className="border-l-4 border-indigo-400 bg-indigo-50/40 px-3 py-2 my-2 rounded-r-lg text-sm italic text-gray-650">
-            {parseInlineStyles(trimmed.replace(/^>\s*/, ""))}
-          </blockquote>
-        );
-      }
-
-      // Normal paragraph
-      if (trimmed.length === 0) {
-        return <div key={idx} className="h-2" />;
-      }
-
-      return (
-        <p key={idx} className="text-sm md:text-base leading-relaxed text-gray-700 text-justify mb-2">
-          {parseInlineStyles(line)}
-        </p>
-      );
-    });
-  };
-
-  // Formatter for inline **bold** and `code` spans
-  const parseInlineStyles = (s: string) => {
-    const parts = [];
-    let currentIdx = 0;
-
-    // Regex matching either **bold** or `code`
-    const regex = /(\*\*|`)(.*?)\1/g;
-    let match;
-
-    while ((match = regex.exec(s)) !== null) {
-      const matchStart = match.index;
-      const type = match[1];
-      const content = match[2];
-
-      // Push proceeding plain text
-      if (matchStart > currentIdx) {
-        parts.push(s.substring(currentIdx, matchStart));
-      }
-
-      // Push styled element
-      if (type === "**") {
-        parts.push(<strong key={matchStart} className="font-semibold text-gray-900">{content}</strong>);
-      } else {
-        parts.push(<code key={matchStart} className="px-1.5 py-0.5 bg-gray-150 font-mono text-xs text-rose-600 rounded bg-gray-100">{content}</code>);
-      }
-
-      currentIdx = regex.lastIndex;
-    }
-
-    if (currentIdx < s.length) {
-      parts.push(s.substring(currentIdx));
-    }
-
-    return parts.length > 0 ? parts : s;
+    return (
+      <div className="prose prose-sm md:prose-base max-w-none prose-slate prose-p:leading-relaxed prose-headings:font-bold prose-a:text-blue-600 prose-pre:bg-gray-800 prose-pre:text-gray-100 markdown-body">
+        <ReactMarkdown
+          remarkPlugins={[remarkMath]}
+          rehypePlugins={[rehypeKatex]}
+          components={{
+            h2: ({node, ...props}) => <h3 className="text-base font-serif font-bold text-blue-900 mt-4 mb-2" {...props}/>,
+            h3: ({node, ...props}) => (
+              <h4 className="text-sm font-bold text-gray-800 mt-3 mb-1.5 font-sans flex items-center">
+                <span className="w-1.5 h-3.5 bg-blue-500 rounded mr-2 inline-block"></span>
+                {props.children}
+              </h4>
+            ),
+            ul: ({node, ...props}) => <ul className="list-disc pl-5 my-1 text-gray-700 space-y-1" {...props}/>,
+            ol: ({node, ...props}) => <ol className="list-decimal pl-5 my-1 text-gray-700 space-y-1" {...props}/>,
+            li: ({node, ...props}) => <li className="text-sm md:text-base leading-relaxed" {...props}/>,
+            p: ({node, ...props}) => <p className="text-sm md:text-base leading-relaxed text-gray-700 text-justify mb-2" {...props}/>,
+            blockquote: ({node, ...props}) => (
+              <blockquote className="border-l-4 border-indigo-400 bg-indigo-50/40 px-3 py-2 my-2 rounded-r-lg text-sm italic text-gray-600" {...props}/>
+            ),
+            code: ({node, inline, className, children, ...props}: any) => {
+              const match = /language-(\w+)/.exec(className || '')
+              return !inline ? (
+                <code className={className} {...props}>
+                  {children}
+                </code>
+              ) : (
+                <code className="px-1.5 py-0.5 font-mono text-xs text-rose-600 bg-gray-100 rounded" {...props}>
+                  {children}
+                </code>
+              )
+            }
+          }}
+        >
+          {text}
+        </ReactMarkdown>
+      </div>
+    );
   };
 
   return (

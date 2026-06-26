@@ -19,11 +19,11 @@ class LLMService:
         
     def generate_answer(self, question: str, context: str, model: str = "qwen2.5-rag") -> str:
         user_prompt = f"""
-        [Question]
-        {question}
-        
         [Context]
         {context}
+        
+        [Question]
+        {question}
         """
         response = self.local_client.chat.completions.create(
             model=model,
@@ -59,11 +59,11 @@ class LLMService:
     def generate_global_answer(self, question: str, context: str, model: str = "gpt-4o-mini") -> str:
         """Generates answer using GPT-4o-mini to handle large global contexts."""
         user_prompt = f"""
-        [Question]
-        {question}
-        
         [Context]
         {context}
+        
+        [Question]
+        {question}
         """
         response = self.openai_client.chat.completions.create(
             model=model,
@@ -109,6 +109,34 @@ JSON BẮT BUỘC phải có đúng các key sau:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ]
+        )
+        return response.choices[0].message.content.strip()
+
+    def translate_answer(self, question: str, local_answer: str) -> str:
+        """Translates the local model's answer into the user's target language (Vietnamese) without modifying its content."""
+        system_prompt = """You are a professional translator.
+Your sole task is to translate the provided Answer into Vietnamese, matching the language of the User's Question.
+
+Guidelines:
+1. Translate the Answer exactly as it is. Do not add, remove, or modify any facts, numbers, metrics, or meanings.
+2. Keep scientific terms (e.g. BERT, GCN, IGLU, MRR, P@1) in English.
+3. If the Answer is already in Vietnamese, return it unchanged.
+4. Output ONLY the translated Vietnamese text. Do not add any introduction, explanation, or notes.
+"""
+        user_prompt = f"""
+[User Question]
+{question}
+
+[Answer to Translate]
+{local_answer}
+"""
+        response = self.openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.0, # Deterministic translation
         )
         return response.choices[0].message.content.strip()
 

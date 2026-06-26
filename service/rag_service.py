@@ -46,7 +46,7 @@ class RAGService:
             
         return all_chunks
     
-    def ask(self, question: str, paper_id: str | None = None, top_k: int = 6):
+    def ask(self, question: str, paper_id: str | None = None, top_k: int = 7):
         # 1. Classify query (Local vs Global)
         query_type = llm_service.classify_query(question)
         print(f"\n[ROUTER] Classified as: {query_type.upper()}")
@@ -74,17 +74,18 @@ User Question: {question}"""
             query_embedding = embedding_service.embed_query(search_query)
             chunks = chroma_service.search(query_embedding, top_k, paper_id=paper_id)
             
-            # GLOBAL CONTEXT INJECTION: Luôn luôn tiêm đoạn văn số 0 vào ngữ cảnh
+            # GLOBAL CONTEXT INJECTION: Luôn luôn tiêm các đoạn văn đầu bài (Chunk 0 & Chunk 1) vào ngữ cảnh
             if paper_id:
-                first_chunk = chroma_service.get_first_chunk(paper_id)
-                if first_chunk:
-                    # Lọc bỏ first_chunk nếu nó đã tồn tại trong kết quả tìm kiếm
-                    chunks = [c for c in chunks if c.get("metadata", {}).get("chunk_index") != 0]
-                    # Sau đó luôn luôn nhét first_chunk lên ĐẦU danh sách
-                    chunks.insert(0, first_chunk)
+                initial_chunks = chroma_service.get_initial_chunks(paper_id, count=2)
+                if initial_chunks:
+                    initial_indices = {c.get("metadata", {}).get("chunk_index") for c in initial_chunks}
+                    # Lọc bỏ các chunk này nếu chúng đã tồn tại trong kết quả tìm kiếm
+                    chunks = [c for c in chunks if c.get("metadata", {}).get("chunk_index") not in initial_indices]
+                    # Sau đó luôn luôn nhét các initial_chunks vào cuối danh sách (gần câu hỏi nhất)
+                    chunks = chunks + initial_chunks
                         
             context = self.build_context(chunks)
-            answer = llm_service.generate_answer(question, context)
+            answer = llm_service.generate_answer(search_query, context)
 
             # --- HYBRID FALLBACK LOGIC ---
             if "INSUFFICIENT_INFORMATION" in answer and paper_id:
@@ -93,6 +94,10 @@ User Question: {question}"""
                 context = self.build_context(chunks)
                 answer = llm_service.generate_global_answer(question, context)
                 query_type = "global_fallback"
+            else:
+                # Dịch câu trả lời của local sang tiếng Việt bằng gpt-4o-mini mà không chỉnh sửa nội dung
+                print("\n[RAG] Translating local output to Vietnamese with GPT-4o-mini...")
+                answer = llm_service.translate_answer(question, answer)
         sources = []
         for chunk in chunks:
             meta = chunk.get("metadata", {})

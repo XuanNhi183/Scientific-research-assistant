@@ -1,6 +1,8 @@
 VENV_DIR ?= .venv
 PYTHON ?= python3
 
+.PHONY: install venv activate shell deps test be fe dataset
+
 install:
 	uv sync
 
@@ -21,10 +23,10 @@ deps:
 test:
 	PYTHONPATH=. uv run python scripts/test_ingestion.py
 
-run:
+be:
 	PYTHONPATH=. uv run python main.py 
 
-server:
+fe:
 	cd frontend && npm run dev
 
 dataset:

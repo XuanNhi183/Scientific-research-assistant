@@ -63,7 +63,7 @@ The system follows a **Modular** design with four main components:
 ├── notebook/                  # For run pipeline: Dataset generation, QLoRA fine-tuning and evaluation
 ├── Modelfile                  # Ollama Modelfile for loading the fine-tuned GGUF model
 ├── pyproject.toml             # Python dependency management (used with `uv`)
-├── Makefile                   # Shortcuts: `make run`, `make dataset`, `make dataset-config`
+├── Makefile                   # Shortcuts: `make backend`, `make frontend`, `make dataset`
 └── .env.example               # Template for required environment variables
 ```
 
@@ -112,14 +112,14 @@ Open a terminal in the project root (`backend/` folder) and run:
 uv sync
 
 # Start the FastAPI backend server (runs on http://localhost:8000)
-make run
+make backend
 ```
 
 ### 4. Start the Frontend (React UI)
 Open a **new** terminal in the project root (`backend/` folder) and run:
 ```bash
 # Start the Vite React development server
-make server
+make frontend
 ```
 *The interactive UI will now be accessible in your browser, typically at `http://localhost:5173`.*
 

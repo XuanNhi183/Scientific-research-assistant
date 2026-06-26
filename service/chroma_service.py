@@ -64,21 +64,30 @@ class ChromaService:
 
         return chunks
     
-    def get_first_chunk(self, paper_id: str):
-        # Trích xuất đoạn văn đầu tiên (thường là Abstract/Giới thiệu/Tác giả)
+    def get_initial_chunks(self, paper_id: str, count: int = 2) -> list[dict]:
+        # Trích xuất các đoạn văn đầu tiên (thường là Abstract/Giới thiệu/Tác giả)
         # Sửa lỗi ChromaDB: Phải dùng $and khi có nhiều hơn 1 điều kiện
         results = self.collection.get(
-            where={"$and": [{"paper_id": paper_id}, {"chunk_index": 0}]}
+            where={"$and": [
+                {"paper_id": paper_id},
+                {"chunk_index": {"$in": list(range(count))}}
+            ]}
         )
         
         if not results or not results.get("documents") or len(results["documents"]) == 0:
-            return None
+            return []
             
-        return {
-            "text": results["documents"][0],
-            "metadata": results["metadatas"][0],
-            "distance": 0.0 # Bỏ qua distance vì đây là trích xuất trực tiếp
-        }
+        chunks = []
+        for doc, meta in zip(results["documents"], results["metadatas"]):
+            chunks.append({
+                "text": doc,
+                "metadata": meta,
+                "distance": 0.0 # Bỏ qua distance vì đây là trích xuất trực tiếp
+            })
+        
+        # Sắp xếp theo chunk_index
+        chunks.sort(key=lambda x: x["metadata"].get("chunk_index", 0))
+        return chunks
 
     def get_all_chunks(self, paper_id: str) -> list[dict]:
         """Retrieves all chunks for a given paper_id, sorted by chunk_index."""

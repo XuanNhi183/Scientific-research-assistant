@@ -29,5 +29,6 @@ data/uploads
 scripts/*
 !scripts/test_ingestion.py
 evaluation/
+scratch/*
 
 qwen2.5-7b-rag-lora-q4_k_m.gguf
