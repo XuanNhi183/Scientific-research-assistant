@@ -14,7 +14,7 @@ The system follows a **Modular** design with four main components:
 - **AI Models**:
   - `text-embedding-3-small` (OpenAI) — vector embeddings
   - `gpt-4o-mini` (OpenAI) — JSON extraction, paper analysis, dataset generation, query translation, routing, and response translation
-  - `Qwen2.5-7B-RAG-LoRA` (Fine-tuned from `Qwen2.5-7B-Instruct`) — local/cloud LLM via Ollama or vLLM for RAG Q&A
+  - `Qwen2.5-7B-RAG-LoRA` (Fine-tuned from `Qwen2.5-7B-Instruct`) — local/remote LLM via Ollama
 
 ![System Architecture](img/system-architecture.png)
 
@@ -78,7 +78,8 @@ You can run the GGUF model either entirely locally (if you have a dedicated GPU)
 
 **Option A: Run Locally (Recommended for machines with GPU)**
 1. Install [Ollama](https://ollama.com/) on your machine.
-2. Open a terminal in the `backend/` folder and build the model using the provided Modelfile:
+2. Download the GGUF model file `qwen2.5-7b-rag-lora-q4_k_m.gguf` from the [Hugging Face Model Hub](https://huggingface.co/xunnhi/Qwen2.5-7B-RAG-LoRA/resolve/main/qwen2.5-7b-rag-lora-q4_k_m.gguf) and place it in the `backend/` folder.
+3. Open a terminal in the `backend/` folder and build the model using the provided Modelfile:
    ```bash
    ollama create qwen2.5-rag -f Modelfile
    ```
@@ -241,7 +242,7 @@ Then update the `OLLAMA_BASE_URL` in `.env` to point the backend at the new mode
 | Vector DB | ChromaDB (local persistent) |
 | Document Processing | PyMuPDF (Online), Marker (Offline), Recursive/Markdown TextSplitters |
 | Embeddings | OpenAI `text-embedding-3-small` |
-| LLMs | OpenAI `gpt-4o-mini`, Qwen2.5-7B-RAG-LoRA (Fine-tuned from `Qwen2.5-7B-Instruct` via Ollama/vLLM) |
+| LLMs | OpenAI `gpt-4o-mini`, Qwen2.5-7B-RAG-LoRA (Fine-tuned from `Qwen2.5-7B-Instruct` via Ollama) |
 | Fine-Tuning | Unsloth, TRL SFTTrainer, QLoRA |
 | Evaluation | vLLM (Batch Inference), LLM-as-a-Judge (GPT-4o-mini) |
 | Package Manager | `uv` |
