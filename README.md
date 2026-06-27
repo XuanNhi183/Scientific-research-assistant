@@ -78,8 +78,8 @@ You can run the GGUF model either entirely locally (if you have a dedicated GPU)
 
 **Option A: Run Locally (Recommended for machines with GPU)**
 1. Install [Ollama](https://ollama.com/) on your machine.
-2. Download the GGUF model file `qwen2.5-7b-rag-lora-q4_k_m.gguf` from the [Hugging Face Model Hub](https://huggingface.co/xunnhi/Qwen2.5-7B-RAG-LoRA/resolve/main/qwen2.5-7b-rag-lora-q4_k_m.gguf) and place it in the `backend/` folder.
-3. Open a terminal in the `backend/` folder and build the model using the provided Modelfile:
+2. Download the GGUF model file `qwen2.5-7b-rag-lora-q4_k_m.gguf` from the [Hugging Face Model Hub](https://huggingface.co/xunnhi/Qwen2.5-7B-RAG-LoRA/resolve/main/qwen2.5-7b-rag-lora-q4_k_m.gguf) and place it in the folder.
+3. Open a terminal in the folder and build the model using the provided Modelfile:
    ```bash
    ollama create qwen2.5-rag -f Modelfile
    ```
@@ -108,7 +108,7 @@ OLLAMA_BASE_URL="http://localhost:11434/v1"
 ```
 
 ### 3. Start the Backend (FastAPI)
-Open a terminal in the project root (`backend/` folder) and run:
+Open a terminal in the project root and run:
 ```bash
 # Install dependencies if you haven't already
 uv sync
@@ -118,7 +118,7 @@ make backend
 ```
 
 ### 4. Start the Frontend (React UI)
-Open a **new** terminal in the project root (`backend/` folder) and run:
+Open a **new** terminal in the project root and run:
 ```bash
 # Start the Vite React development server
 make frontend
