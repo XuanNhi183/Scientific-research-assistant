@@ -16,7 +16,7 @@ The system follows a **Modular** design with four main components:
   - `gpt-4o-mini` (OpenAI) — JSON extraction, paper analysis, dataset generation, query translation, routing, and response translation
   - `Qwen2.5-7B-RAG-LoRA` (Fine-tuned from `Qwen2.5-7B-Instruct`) — local/cloud LLM via Ollama or vLLM for RAG Q&A
 
-![System Architecture](img/sys-archi.png)
+![System Architecture](img/system-architecture.png)
 
 ---
 
