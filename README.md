@@ -13,8 +13,8 @@ The system follows a **Modular** design with four main components:
 - **Data & Storage**: `data/uploads/` for raw PDFs, **ChromaDB** as the persistent vector store.
 - **AI Models**:
   - `text-embedding-3-small` (OpenAI) — vector embeddings
-  - `gpt-4o-mini` (OpenAI) — JSON extraction, paper analysis, and dataset generation
-  - `Qwen2.5-7B-Instruct` — local LLM via Ollama for RAG Q&A
+  - `gpt-4o-mini` (OpenAI) — JSON extraction, paper analysis, dataset generation, query translation, routing, and response translation
+  - `Qwen2.5-7B-RAG-LoRA` (Fine-tuned from `Qwen2.5-7B-Instruct`) — local/cloud LLM via Ollama or vLLM for RAG Q&A
 
 ![System Architecture](img/sys-archi.png)
 
@@ -85,9 +85,10 @@ You can run the GGUF model either entirely locally (if you have a dedicated GPU)
 
 **Option B: Run on Google Colab (For machines without GPU)**
 1. Upload and open the [`notebook/ResearchOS_ngrok.ipynb`](notebook/ResearchOS_ngrok.ipynb) notebook in Google Colab.
-2. Insert your Ngrok Auth Token in the designated cell (Step 7).
-3. Run all cells to start the Ollama server and download the GGUF model.
-4. Copy the generated public Ngrok URL (e.g., `https://xxxx.ngrok-free.app/v1`).
+2. Run the first setup cell which installs `pciutils` (ensuring `lspci` is available) so that Ollama correctly detects the NVIDIA T4 GPU instead of falling back to CPU mode.
+3. Insert your Ngrok Auth Token in the designated cell (Step 7).
+4. Run all cells to start the Ollama server and download the GGUF model.
+5. Verify that the output prints `>>> NVIDIA GPU installed.` and copy the generated public Ngrok URL (e.g., `https://xxxx.ngrok-free.app/v1`).
 
 ### 2. Configure Environment Variables
 Copy the template environment file:
@@ -161,8 +162,9 @@ User Question
     → Query Translation: Translates user question to an optimized English search query.
     → Embed English query (text-embedding-3-small)
     → Vector search ChromaDB (Top-K chunks)
-    → Context Injection: Forcibly prepends Chunk 0 (Title/Authors) to context.
-    → Qwen2.5-7B-Instruct generates answer.
+    → Context Injection: Forcibly appends Chunk 0 (Title/Authors) and Chunk 1 (Abstract) to the end of the context (closest to the question) to prevent the "Lost in the Middle" effect.
+    → English-native Prompting: Qwen2.5-7B-Instruct reads English context and the English question, generating the answer in English for maximum factual accuracy.
+    → Output Translation: GPT-4o-mini translates the local model's English response into natural Vietnamese.
     → 🔄 HYBRID FALLBACK: If Qwen returns INSUFFICIENT_INFORMATION, query is instantly routed to the GLOBAL path.
   
   [If GLOBAL - Summarization/Map-Reduce]:
@@ -202,7 +204,7 @@ Training is done with **Unsloth** and **TRL SFTTrainer** on Google Colab (GPU T4
 |---|---|
 | Base Model | `unsloth/Qwen2.5-7B-Instruct` |
 | Dataset | `xunnhi/QA-Dataset-Generator` (1156 samples, ChatML format) |
-| Max Sequence Length | `2048` |
+| Max Sequence Length / Context Window | `2048` (Training) / `8192` (Inference `num_ctx`) |
 | Fine-Tuned Model | [`xunnhi/Qwen2.5-7B-RAG-LoRA`](https://huggingface.co/xunnhi/Qwen2.5-7B-RAG-LoRA) |
 ### Deploying the Fine-Tuned Model
 
@@ -239,7 +241,7 @@ Then update the `OLLAMA_BASE_URL` in `.env` to point the backend at the new mode
 | Vector DB | ChromaDB (local persistent) |
 | Document Processing | PyMuPDF (Online), Marker (Offline), Recursive/Markdown TextSplitters |
 | Embeddings | OpenAI `text-embedding-3-small` |
-| LLMs | OpenAI `gpt-4o-mini`, Qwen2.5-7B-Instruct (Ollama) |
+| LLMs | OpenAI `gpt-4o-mini`, Qwen2.5-7B-RAG-LoRA (Fine-tuned from `Qwen2.5-7B-Instruct` via Ollama/vLLM) |
 | Fine-Tuning | Unsloth, TRL SFTTrainer, QLoRA |
 | Evaluation | vLLM (Batch Inference), LLM-as-a-Judge (GPT-4o-mini) |
 | Package Manager | `uv` |
