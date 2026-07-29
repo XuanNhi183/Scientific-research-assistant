@@ -145,10 +145,10 @@ make dataset-config CONFIG=config/my_config.yaml
 When a user uploads a PDF, the following steps run through `document_service.py` and `chunking.py`:
 
 1. **Storage**: PDF saved to `data/uploads/` with a generated UUID (`file_id`).
-2. **Text Extraction (Marker OCR)**: Uses `marker` to robustly convert PDFs into Markdown (preserving tables and formulas). Falls back to PyMuPDF (`fitz`) if Marker fails.
-3. **Section Identification**: Noisy sections (`References`, `Acknowledgements`, `Appendix`, `Declarations`) are automatically filtered out using regex or font heuristics.
-4. **Semantic Chunking**: `MarkdownHeaderTextSplitter` intelligently splits the paper by Markdown headers. If a section is still too long, `RecursiveCharacterTextSplitter` is applied (`chunk_size=700`, `overlap=150`).
-5. **Embedding & Storage**: Each chunk is vectorized via `text-embedding-3-small` and stored in ChromaDB alongside metadata (`paper_id`, `section`, `page`, `chunk_index`).
+2. **Text Extraction**: Uses `PyMuPDF (fitz)` to quickly extract text lines and fonts.
+3. **Section Identification**: Identifies Titles & Headings based on font sizes. Noisy sections before the Abstract are automatically filtered out, preserving Author/Metadata.
+4. **Chunking**: Uses `RecursiveCharacterTextSplitter` (`chunk_size=700`, `overlap=150`) to split the extracted sections. A heuristic filter automatically drops chunks that are purely noise or raw data tables without narrative context.
+5. **Embedding & Storage**: Each clean chunk is vectorized and stored in ChromaDB alongside metadata (`paper_id`, `section`, `page`, `chunk_index`).
 6. **Full Paper Analysis**: `gpt-4o-mini` automatically extracts a structured JSON summary including Abstract, Metrics, Key Findings, and Glossary on upload.
 
 ### Retrieval-Augmented Generation (RAG)
@@ -157,24 +157,24 @@ When a user asks a question, `rag_service.py` uses an **Agentic Router** to clas
 
 ```text
 User Question
-  → Router (classify_query) decides routing path: [LOCAL] or [GLOBAL]
+  → Query Translation & Optimization: Translates user question into an optimized English search query (passed untouched if already English).
+  → Router (classify_query): Uses the English query to decide routing path: [LOCAL] or [GLOBAL].
   
   [If LOCAL - Specific factual search]:
-    → Query Translation: Translates user question to an optimized English search query.
     → Embed English query (text-embedding-3-small)
     → Vector search ChromaDB (Top-K chunks)
     → Context Injection: Forcibly appends Chunk 0 (Title/Authors) and Chunk 1 (Abstract) to the end of the context (closest to the question) to prevent the "Lost in the Middle" effect.
-    → English-native Prompting: Qwen2.5-7B-Instruct reads English context and the English question, generating the answer in English for maximum factual accuracy.
-    → Output Translation: GPT-4o-mini translates the local model's English response into natural Vietnamese.
+    → English-native Prompting: Qwen2.5-7B-Instruct reads English context and the English query, generating the answer in English for maximum factual accuracy.
     → 🔄 HYBRID FALLBACK: If Qwen returns INSUFFICIENT_INFORMATION, query is instantly routed to the GLOBAL path.
   
   [If GLOBAL - Summarization/Map-Reduce]:
     → Fetch ALL chunks for the paper.
-    → Keyword Filtering: Keeps only chunks with Math/Table keywords if applicable.
+    → Keyword Filtering: Keeps only chunks matching Math/Table keywords using the English query.
     → Truncation: Caps at 100k tokens (keeps Abstract + Conclusion if oversized).
-    → GPT-4o-mini generates comprehensive global summary.
+    → GPT-4o-mini reads the full context and the English query, generating a comprehensive global summary in English.
 
-  → API returns answer + precise source list (page & chunk references)
+  → Output Language Matching: Translates the English response (from either path) back into the exact original language of the User Question.
+  → API returns translated answer + precise source list (page & chunk references)
 ```
 
 ---

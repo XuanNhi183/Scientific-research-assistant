@@ -47,28 +47,33 @@ class RAGService:
         return all_chunks
     
     def ask(self, question: str, paper_id: str | None = None, top_k: int = 7):
-        # 1. Classify query (Local vs Global)
-        query_type = llm_service.classify_query(question)
+        # 1. Translate question to English first (Optimization)
+        print("\n[RAG] Translating/Optimizing User Question...")
+        rewrite_prompt = f"""You are a multilingual AI assistant.
+Your task is to translate the user's question into a natural language English question, which will be used to search a vector database and generate answers.
+Keep the exact same semantic meaning and detail as the original question. Do not shorten it into keywords.
+Return ONLY the English question, without quotes, explanations, or extra text.
+If the question is already in English, return it unchanged.
+
+User Question: {question}"""
+        search_query = llm_service.generate_raw(rewrite_prompt)
+        print(f"[RAG] Original Question: {question}")
+        print(f"[RAG] Optimized English Query: {search_query}")
+
+        # 2. Classify query (Local vs Global) using English query
+        query_type = llm_service.classify_query(search_query)
         print(f"\n[ROUTER] Classified as: {query_type.upper()}")
 
         if query_type == "global" and paper_id:
             print("[RAG] Executing GLOBAL query path...")
             # Retrieve global context with smart filtering
-            chunks = self.get_global_context(paper_id, question)
+            chunks = self.get_global_context(paper_id, search_query)
             context = self.build_context(chunks)
-            answer = llm_service.generate_global_answer(question, context)
+            raw_answer = llm_service.generate_global_answer(search_query, context)
+            print("\n[RAG] Matching output language with user's question...")
+            answer = llm_service.translate_answer(question, raw_answer)
         else:
             print("[RAG] Executing LOCAL query path...")
-            # 2. Query Translation & Optimization (Advanced RAG)
-            rewrite_prompt = f"""You are a multilingual AI assistant.
-Your task is to translate the user's question into a natural language English question, which will be used to search a vector database.
-Keep the exact same semantic meaning and detail as the original question. Do not shorten it into keywords.
-Return ONLY the English question, without quotes, explanations, or extra text.
-
-User Question: {question}"""
-            search_query = llm_service.generate_raw(rewrite_prompt)
-            print(f"[RAG] Original Question: {question}")
-            print(f"[RAG] Optimized English Query: {search_query}")
 
             # 3. Embed the English search query
             query_embedding = embedding_service.embed_query(search_query)
@@ -90,13 +95,15 @@ User Question: {question}"""
             # --- HYBRID FALLBACK LOGIC ---
             if "INSUFFICIENT_INFORMATION" in answer and paper_id:
                 print("\n[FALLBACK] Local search failed (Insufficient Info). Triggering GLOBAL FALLBACK...")
-                chunks = self.get_global_context(paper_id, question)
+                chunks = self.get_global_context(paper_id, search_query)
                 context = self.build_context(chunks)
-                answer = llm_service.generate_global_answer(question, context)
+                raw_answer = llm_service.generate_global_answer(search_query, context)
                 query_type = "global_fallback"
+                print("\n[RAG] Matching output language with user's question (Fallback)...")
+                answer = llm_service.translate_answer(question, raw_answer)
             else:
-                # Dịch câu trả lời của local sang tiếng Việt bằng gpt-4o-mini mà không chỉnh sửa nội dung
-                print("\n[RAG] Translating local output to Vietnamese with GPT-4o-mini...")
+                # Dịch câu trả lời của local sang ngôn ngữ của user
+                print("\n[RAG] Matching output language with user's question...")
                 answer = llm_service.translate_answer(question, answer)
         sources = []
         for chunk in chunks:

@@ -115,13 +115,13 @@ JSON BẮT BUỘC phải có đúng các key sau:
     def translate_answer(self, question: str, local_answer: str) -> str:
         """Translates the local model's answer into the user's target language (Vietnamese) without modifying its content."""
         system_prompt = """You are a professional translator.
-Your sole task is to translate the provided Answer into Vietnamese, matching the language of the User's Question.
+Your sole task is to translate the provided Answer into the EXACT SAME LANGUAGE as the User's Question.
 
 Guidelines:
-1. Translate the Answer exactly as it is. Do not add, remove, or modify any facts, numbers, metrics, or meanings.
-2. Keep scientific terms (e.g. BERT, GCN, IGLU, MRR, P@1) in English.
-3. If the Answer is already in Vietnamese, return it unchanged.
-4. Output ONLY the translated Vietnamese text. Do not add any introduction, explanation, or notes.
+1. If the User's Question is in English, output the Answer in English (do not translate to Vietnamese).
+2. If the User's Question is in Vietnamese, translate the Answer to Vietnamese.
+3. Keep scientific terms (e.g. BERT, GCN, IGLU, MRR, P@1) in English.
+4. Output ONLY the final text. Do not add any introduction, explanation, or notes.
 """
         user_prompt = f"""
 [User Question]
